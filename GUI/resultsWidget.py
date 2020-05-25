@@ -1,17 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jan 10 18:06:59 2020
+Created on Mon May 18 09:24:22 2020
 
-@author: jarekj
+@author: jarek
 """
+
 #%%
-from PyQt5 import QtGui, QtWidgets, QtCore
+from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QAbstractTableModel
-import pandas as pd
-import numpy as np
+import os
+
 from PROC.albedo import albedo
+from GUI.baseGui import baseGui
+
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+import matplotlib
+matplotlib.use('Qt5Agg')
+
 #%%
+
 class pandasModel(QAbstractTableModel):
     def __init__(self, pData, parent=None):
         QAbstractTableModel.__init__(self, parent)
@@ -34,134 +43,171 @@ class pandasModel(QAbstractTableModel):
     def headerData(self, col, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return self._data.columns[col]
-        return None    
-
-
-class selectDayWidget(QtWidgets.QWidget):
-    def __init__(self,label):
+        return None 
+#%%
+class errorCurveDialog(QtWidgets.QDialog,baseGui):
+    def __init__(self,albedo,plottitle,errorlist,description):
         super().__init__()
         
-        self.a = None
-        self.plot = None
+        self.setWindowTitle(plottitle)
+        self.description = description
+        self.record = None
+        self.errorlist = errorlist
+        self.plottitle = plottitle
         
-        self.date = QtWidgets.QDateEdit()
-        self.date.setDateTime(QtCore.QDateTime.currentDateTime())
-        self.date.setDisplayFormat("yyyy-MM-dd")
-        self.date.setCalendarPopup(True)
-        this_label = QtWidgets.QLabel("&"+label)
-        this_label.setBuddy(self.date)
-        self.date.dateChanged.connect(self.date_change)
+        figure = Figure(figsize=(8,9))
+        canvas = FigureCanvas(figure)
         
-        self.day = QtWidgets.QSpinBox()
-        self.day.setRange(0,366)
-        # recalculate date into day of year
-        self.__day_of_year = self.date.date().dayOfYear()
-        self.day.setValue(self.day_of_year)
-        self.day.valueChanged.connect(self.day_change)
+        pdfButton = QtWidgets.QPushButton("PLOT")
+        pdfButton.setToolTip("plot diagram")
+        copyButton = QtWidgets.QPushButton("COPY")
+        copyButton.setToolTip("copy parameters to clipboard")
+        closeButton = QtWidgets.QPushButton("CLOSE")
+        self.headerCheck = QtWidgets.QCheckBox("Header")
+        self.headerCheck.setToolTip("Copy also header data")    
+
         
-        mainLayout = QtWidgets.QHBoxLayout()
-        mainLayout.addWidget(this_label)
-        mainLayout.addWidget(self.date)
-        mainLayout.addWidget(self.day)
+        descLayout = QtWidgets.QHBoxLayout()
+        for i,(name,value) in enumerate(description):
+            if name =='a45':
+                value = round(value,4)
+            text = "{}:{}".format(name,value)
+            descLayout.addWidget(QtWidgets.QLabel(text))
+        
+        
+        buttonsLayout = QtWidgets.QHBoxLayout()
+        buttonsLayout.addStretch()
+        buttonsLayout.addWidget(self.headerCheck)
+        buttonsLayout.addWidget(copyButton)
+        buttonsLayout.addWidget(pdfButton)
+        buttonsLayout.addWidget(closeButton)
+        
+        mainLayout = QtWidgets.QVBoxLayout()
+        mainLayout.addLayout(buttonsLayout)
+        mainLayout.addWidget(canvas)
+        mainLayout.addLayout(descLayout)
         self.setLayout(mainLayout)
-
-    
-    def day_change(self):
-        tmp_day = self.day.value()
-        delta = tmp_day - self.day_of_year
-        tmp_date = self.date.date()
-        tmp_date = tmp_date.addDays(delta)
-        self.__day_of_year = tmp_day
-        self.date.setDate(tmp_date)
+        closeButton.clicked.connect(self.accept) 
+        copyButton.clicked.connect(self.copyButton_clicked)
         
-    def date_change(self):
-        self.__day_of_year = self.date.date().dayOfYear()
-        self.day.setValue(self.day_of_year)
+        figure.clear()
+        self.albedo = albedo
+        self.albedo.plot_time_curve(figure,self.plottitle,self.errorlist)
+        canvas.draw()  
+        
     
-    @property
-    def day_of_year(self):
-        return self.__day_of_year
+    def setRecord(self,index):
+        self.record = self.albedo.get_record(index)
 
-class resultsWidget(QtWidgets.QWidget):
+    
+    def copyButton_clicked(self):
+        if self.record is None:
+            self._e.warning("No record selected","Nothing copied")
+            return
+        header = self.record.index.values.tolist()
+        header = [str(b) for b in header]
+        line = self.record.values.tolist()
+        line = [str(b) for b in line]
+        header = "\t".join(header)
+        line = "\t".join(line)
+        header = header+"latitude \t longitude"
+        line = line + "\t".join([str(b) for b in self.albedo.location])
+        
+        text = line
+        if self.headerCheck.isChecked():
+            text = header + os.linesep + line
+        cb = QtWidgets.QApplication.clipboard()
+        cb.clear(mode=cb.Clipboard)
+        cb.setText(text, mode=cb.Clipboard)
+        return
+        
+
+    def drawButton_clicked(self):
+        if self.albedo is None:
+            self._e.warning("Nothing to plot",None)
+            return
+        filetypes = "pdf (*pdf);;png (*png);;svg (*svg)"
+        fileName,fileType = QtWidgets.QFileDialog.\
+            getSaveFileName(self,"File to plot results", self.inputDir,filetypes)
+        file,ext = os.path.splitext(fileName)
+        
+        if ext not in ['.pdf','.png','.svg']:
+            fileName = fileName+"."+fileType[:3]
+        self.albedo.plot_time_curve(figure=fileName,plottitle=self.plottitle,errorlist=self.errorlist)
+        return
+        
+#%%
+
+class resultsWidget(QtWidgets.QWidget,baseGui):
     def __init__(self):
         super().__init__()
-
-        self.results = QtWidgets.QTableView()
-        self.results.clicked.connect(self.viewClicked)
-
-        self.startDay = selectDayWidget("Start day")
        
-        self.batchDatesBox = QtWidgets.QCheckBox('&Range')
-        self.batchDatesBox.setChecked(False)
-        self.batchDatesBox.stateChanged.connect(self.batchDates)
+        self.resultsTable = QtWidgets.QTableView()
+        self.resultsTable.setSizePolicy(QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Expanding)
+        self.resultsTable.setMinimumHeight(820)
+        self.resultsTable.clicked.connect(self.viewClicked)
+       
+        self.saveResultsButton = QtWidgets.QPushButton("EXPORT")
+        titleResultsLabel = QtWidgets.QLabel("Results of processing")
         
-        self.entireYearBox = QtWidgets.QCheckBox('&Year')
-        self.entireYearBox.setChecked(False)
-        self.entireYearBox.stateChanged.connect(self.entireYear)
+        ButtonsLayout = QtWidgets.QHBoxLayout()
+        ButtonsLayout.addStretch()
+        ButtonsLayout.addWidget(titleResultsLabel)
+        ButtonsLayout.addWidget(self.saveResultsButton)
         
-
-        self.errors = QtWidgets.QLineEdit()
-        self.errors.setText('0.01,0.02,0.05')
-        
-        errorsLabel = QtWidgets.QLabel("&Errors")
-        errorsLabel.setBuddy(self.errors)
-        
-        calcButton = QtWidgets.QPushButton('Ru&n')
-        calcButton.clicked.connect(self.runCalculation)
-
-       #Build layout
         mainLayout = QtWidgets.QVBoxLayout()
-        lt = QtWidgets.QHBoxLayout()
-
-        lt.addWidget(self.startDay)
-        lt.addWidget(self.batchDatesBox)
-        lt.addWidget(self.entireYearBox)
-        
-        lt.addWidget(errorsLabel)
-        lt.addWidget(self.errors)
-        lt.addWidget(calcButton)
-        
-        
-        mainLayout.addLayout(lt)
-        mainLayout.addWidget(self.results)
+        mainLayout.addLayout(ButtonsLayout)
+        mainLayout.addWidget(self.resultsTable)
         self.setLayout(mainLayout)
+        self.data = None
+        if self.data is None:
+            self.saveResultsButton.setEnabled(False)
+        self.saveResultsButton.clicked.connect(self.exportExcel_clicked)    
     
-    def parseErrors(self):
-        errors = self.errors.text().split(",")
-        return [float(error) for error in errors]
 
-    def batchDates(self):
-        pass
-    
-    def entireYear(self):
-        pass
-    
-    def connect(self,locationWidget,curveWidget):
-        self.location = locationWidget
-        self.soil_curve = curveWidget
+    def runCalculation(self,location,model,days,errors,soilParams):
+        self.location = location
+        soil_model = model
+        start_day,end_day,interval = days
+        self.errors = errors
+        self.soilParams = soilParams+list(zip(["latitude","longitude"],self.location))
         
+        self.a = albedo()
+        self.a.load_parameters(soil_model,self.location)
+        self.a.batch_mean_albedo_time(start_day=start_day,end_day=end_day,
+                                                  interval=interval,errors=self.errors)
+        
+        self.data = self.a.get_data()
+        dataModel  = pandasModel(self.data)
+        self.resultsTable.setModel(dataModel)
+        if self.data is not None:
+            self.saveResultsButton.setEnabled(True)
+            
+     
     def viewClicked(self, index):
-        if self.a is None or self.plot is None:
+        if self.a is None:
             return
         row=index.row()
         day_of_year = self.data.iloc[row,0].item()
-        self.plot.figure.clear()
-        ax = self.plot.figure.add_subplot(111)
-        self.a.plot_curve(ax,day_of_year)
-        self.plot.canvas.draw()
+        self.a.store_current_date()
+        self.a.set_date_by_day(day_of_year)
+        curvePlot = errorCurveDialog(self.a,"tytuł",self.errors,self.soilParams)
+        curvePlot.setRecord(row)
+        curvePlot.show()
+        curvePlot.exec_()
+        self.a.restore_current_date()
+  
 
-    def connect_plot(self,plotWidget):
-        self.plot = plotWidget
-    
-    def runCalculation(self):
-        start_day = end_day = int(self.startDay.day_of_year)
-        location = self.location.getLocation()
-        soil_curve = self.soil_curve.getCurve()
-        self.errors = self.parseErrors()
-        self.a = albedo()
-        self.a.load_parameters(soil_curve,location)
-        self.data = self.a.batch_mean_albedo_time(start_day=start_day,end_day=end_day,interval=1,errors=self.errors)
-        model  = pandasModel(self.data)
-        self.results.setModel(model)
-    
-
+    def exportExcel_clicked(self):
+        if self.data is None:
+            self.warning("There is no data to export","Run analysis first")
+        
+        filetypes = "Excel (*.xlsx)"
+        fileName,_ = QtWidgets.QFileDialog.\
+            getSaveFileName(self,"File to save results", self.outputDir,filetypes) 
+        
+        file,ext = os.path.splitext(fileName)
+        print(file,ext)
+        if ext != '.xlsx':
+            fileName = fileName+'.xlsx'
+        self.data.to_excel(fileName)
