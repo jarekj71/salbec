@@ -129,6 +129,8 @@ class errorCurveDialog(QtWidgets.QDialog,baseGui):
         filetypes = "pdf (*pdf);;png (*png);;svg (*svg)"
         fileName,fileType = QtWidgets.QFileDialog.\
             getSaveFileName(self,"File to plot results", self.inputDir,filetypes)
+        if fileName=="":
+            return
         file,ext = os.path.splitext(fileName)
         
         if ext not in ['.pdf','.png','.svg']:
@@ -205,9 +207,10 @@ class resultsWidget(QtWidgets.QWidget,baseGui):
         filetypes = "Excel (*.xlsx)"
         fileName,_ = QtWidgets.QFileDialog.\
             getSaveFileName(self,"File to save results", self.outputDir,filetypes) 
-        
+        if fileName=="":
+            return
         file,ext = os.path.splitext(fileName)
-        print(file,ext)
+   
         if ext != '.xlsx':
             fileName = fileName+'.xlsx'
         self.data.to_excel(fileName)

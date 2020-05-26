@@ -103,7 +103,8 @@ class soilImporterDialog(QtWidgets.QDialog,baseGui):
         
         fileName,_ = QtWidgets.QFileDialog.\
             getOpenFileName(self,"File to take spectrum from", self.inputDir,filetypes) #2B
-      
+        if fileName=="":
+            return
         self.gl = soil()
         warning = self.gl.importFromFile(fileName)
         if warning:
@@ -175,8 +176,10 @@ class soilImporterDialog(QtWidgets.QDialog,baseGui):
         filetypes = "pdf (*pdf);;png (*png);;svg (*svg)"
         fileName,fileType = QtWidgets.QFileDialog.\
             getSaveFileName(self,"File to plot results", self.outputDir,filetypes)
+        if fileName=="":
+            return
+
         file,ext = os.path.splitext(fileName)
-        
         if ext not in ['.pdf','.png','.svg']:
             fileName = fileName+"."+fileType[:3]
         

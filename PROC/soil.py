@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import copy, os, pickle
-#from io import StringIO będzie niezbędne przy rozbudowie
 
 #%%
 

@@ -1,4 +1,4 @@
-    #!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Thu Jan 16 12:44:27 2020
@@ -9,7 +9,8 @@ Created on Thu Jan 16 12:44:27 2020
 import datetime
 import numpy as np
 import pandas as pd
-import astral
+from astral import sun 
+from astral import Observer
 import pickle
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -26,7 +27,7 @@ def time_since_midnight(t):
 
 class albedo:
     def __init__(self,step=1,year=None):
-        self.__a = astral.Astral() 
+        self.__a = sun 
         self.__sec_in_min = 60
         self.__step = step
         self.__year = datetime.datetime.today().year if year is None else year
@@ -45,7 +46,7 @@ class albedo:
     
     def load_parameters(self,soil_curve,location):
         self.__soil = soil_curve
-        self.__location = location
+        self.__location = Observer(*location)
     
     def store_current_date(self):
         self.__current_date_copy = self.__current_date
@@ -65,13 +66,13 @@ class albedo:
         self.__day_of_the_year = day_of_the_year
         self.__current_date = datetime.datetime(self.__year, 1, 1) + datetime.timedelta(self.__day_of_the_year- 1)
         self.__noon_time = self.__current_date.replace(hour=12) #12:00
-        self.__sun_time = self.__a.sun_utc(self.__current_date, *self.__location)
+        self.__sun_time = self.__a.sun(self.__location,self.__current_date)
     
     def set_date_by_date(self,day,month,year=None):
         if year is None:
             year = self.__year
         self.__current_date = datetime.datetime(year,month,day)
-        self.__sun_time = self.__a.sun_utc(self.__current_date, *self.__location)
+        self.__sun_time = self.__a.sun(self.__location,self.__current_date)
         self.__noon_time = self.__current_date.replace(hour=12) #12:00
     
     
@@ -100,7 +101,7 @@ class albedo:
     
     def __angle(self,step,i):
         h = self.__sun_time['noon'] + datetime.timedelta(0,self.__sec_in_min*step*i)
-        an = self.__a.solar_elevation(h, *self.__location)
+        an = self.__a.elevation(self.__location,h)
         return 90-an
 
     def describe_day(self):

@@ -36,7 +36,10 @@ class baseGui():
         msg.exec_()
         
     def reset(self):
-        baseGui.__inputDirectory = os.getcwd()
+        if os.path.isdir(os.path.join(os.getcwd(),"ASSETS")):
+            baseGui.__inputDirectory = os.getcwd()+"/ASSETS"
+        else:
+            baseGui.__inputDirectory = os.getcwd()
         baseGui.__outputDirectory = os.getcwd()
     
     @property

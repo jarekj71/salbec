@@ -14,7 +14,7 @@ class mapDialog(QtWidgets.QDialog,baseGui):
     def __init__(self):
         super().__init__()
         mainLayout = QtWidgets.QVBoxLayout()
-        self.div = 2 
+        self.div = 2
         imagemap = 'world{}.png'.format(self.div)
         filepath = os.path.join("GUI",imagemap)
         image = QtGui.QImage(filepath)
@@ -77,7 +77,9 @@ class latlonWidget(QtWidgets.QWidget):
     
     def mapButton_clicked(self):
         theMap = mapDialog()
-        theMap.exec_()
+        results = theMap.exec_()
+        if not results:
+            return
         if theMap.lat is not None:
             self.latEdit.setText(str(theMap.lat))
             self.lonEdit.setText(str(theMap.lon))

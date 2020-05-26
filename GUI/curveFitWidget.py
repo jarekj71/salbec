@@ -18,8 +18,8 @@ matplotlib.use('Qt5Agg')
 from PROC.soil import soilCurve, soilDatabase
 from GUI.baseGui import baseGui
 
-os.chdir('/home/jarek/Dropbox/PROJEKTY/albedo')
-app=QtWidgets.QApplication(sys.argv) #usunąć
+
+
 #%%
 class curvePlot(QtWidgets.QDialog,baseGui):
     def __init__(self,curve=None):
@@ -91,12 +91,14 @@ class curvePlot(QtWidgets.QDialog,baseGui):
         filetypes = "pdf (*pdf);;png (*png);;svg (*svg)"
         fileName,fileType = QtWidgets.QFileDialog.\
             getSaveFileName(self,"File to plot results", self.outputDir,filetypes)
-        file,ext = os.path.splitext(fileName)
+        if fileName=="":
+            return
         
+        file,ext = os.path.splitext(fileName)
         if ext not in ['.pdf','.png','.svg']:
             fileName = fileName+"."+fileType[:3]
         
-        fig,ax = matplotlib.pyplot.subplots(1,1,figsize=(9,5),dpi=150)
+        fig,ax = matplotlib.pyplot.subplots(1,1,figsize=(8,4),dpi=150)
         self.curve.drawFitted(ax)
         fig.savefig(fileName)
         

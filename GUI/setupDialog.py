@@ -9,7 +9,6 @@ Created on Mon May 25 10:43:48 2020
 #%%
 import os, sys
 from PyQt5 import QtWidgets
-#from GUI.baseGui import baseGui
 
 class setupDialog(QtWidgets.QDialog): 
     def __init__(self,base):

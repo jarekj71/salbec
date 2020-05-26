@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/home/jarek/albedo/bin/python3
 # -*- coding: utf-8 -*-
 """
 Created on Thu Jan  9 19:28:02 2020
@@ -26,7 +26,7 @@ class mainWindow(QtWidgets.QMainWindow):
         super().__init__()
         self.setFixedSize(1600,1024)
         #nazwa aplikacji
-        
+
         self.base = baseGui()
         self.base.reset()
         self.soiImporter = soilImporterDialog()
@@ -35,7 +35,7 @@ class mainWindow(QtWidgets.QMainWindow):
         self.daysSelect = selectDaysWidget()
         self.results = resultsWidget()
         self.setup = setupDialog(self.base)
-      
+
         inputLayout = QtWidgets.QHBoxLayout()
         inputLayout.addStretch()
         soilImporterButton = QtWidgets.QPushButton("&Add Soil")
