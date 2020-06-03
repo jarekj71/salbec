@@ -170,10 +170,9 @@ class curveFitWidget(QtWidgets.QWidget):
         self.soilCombo_currentTextChanged()
 
     def refreshSoilCombo(self):
-        self._soils = self._soilDatabase.database
         self._soil = None
         self.soilCombo.clear()
-        self.soilCombo.addItems(list(self._soils.keys())[::-1]) 
+        self.soilCombo.addItems(self._soilDatabase.soilNames) 
         
     def coordinates(self):
         if self._soil is not None:
@@ -184,8 +183,10 @@ class curveFitWidget(QtWidgets.QWidget):
         soilName = self.soilCombo.currentText()
         if soilName =='':
             return
-        self._soil = pickle.load(open(self._soils[soilName],"rb"))
+        soilPath = self._soilDatabase.getPath(soilName)
+        self._soil = pickle.load(open(soilPath,"rb"))
         self.coordSignal.emit()
+        self.curve = None
 
     def fitCurve(self):
         try:
@@ -206,8 +207,7 @@ class curveFitWidget(QtWidgets.QWidget):
             self.curve.modify_curve_parameters(b=-2/200)
         
     def plotCurve(self):
-        if self.curve is None:
-            self.fitCurve()
+        self.fitCurve()
         curvePlotDialog = curvePlot(self.curve)
         curvePlotDialog.show()
         curvePlotDialog.exec_()

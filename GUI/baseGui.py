@@ -38,6 +38,9 @@ class baseGui():
     def reset(self):
         baseGui.__inputDirectory = os.getcwd()
         baseGui.__outputDirectory = os.getcwd()
+        assets = 'ASSETS'
+        if os.path.isdir(assets):
+            baseGui.__inputDirectory = os.path.join(os.getcwd(),assets)
     
     @property
     def inputDir(self):

@@ -54,7 +54,6 @@ class latlonWidget(QtWidgets.QWidget):
         mainLayout.addWidget(label,0,0)
         mainLayout.addWidget(self.lonEdit,0,1)
         mainLayout.addWidget(self.latEdit,1,1)
-        #self.soilCombo_currentTextChanged() # wypełnienie watościami początkowymi
         
         self.blockCheck = QtWidgets.QCheckBox("&Block")
         self.blockCheck.setToolTip("Keep coordinates unchanged")
@@ -68,7 +67,7 @@ class latlonWidget(QtWidgets.QWidget):
         mapButton.clicked.connect(self.mapButton_clicked)
     
     def setCoordinatesFromSoil(self,coords):
-        if not self.blockCheck.isChecked:
+        if self.blockCheck.isChecked():
             return # do nothin
         lon,lat=coords
         if lat is not None and lon is not None:

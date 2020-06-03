@@ -56,7 +56,7 @@ class selectDayWidget(QtWidgets.QWidget,baseGui):
         return self.__day_of_year
     
 
-class selectDaysWidget(QtWidgets.QWidget):
+class selectDaysWidget(QtWidgets.QWidget,baseGui):
     def __init__(self):
         super().__init__()
         
@@ -91,7 +91,7 @@ class selectDaysWidget(QtWidgets.QWidget):
         label = QtWidgets.QLabel('Errors (%)')
         label.setBuddy(self.errorsBox)
         mainLayout.addWidget(label,1,2)
-        mainLayout.addWidget(self.errorsBox,1,3)                
+        mainLayout.addWidget(self.errorsBox,1,3)
 
         self.setLayout(mainLayout)
 

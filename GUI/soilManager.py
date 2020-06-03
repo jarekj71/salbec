@@ -7,7 +7,6 @@ Created on Tue May  5 09:27:40 2020
 """
 
 import os, pickle
-os.chdir('/home/jarek/Dropbox/PROJEKTY/albedo')
 from PyQt5 import QtWidgets, QtCore
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -127,6 +126,7 @@ class soilManagerDialog(QtWidgets.QDialog,baseGui):
         self.figure.clear()
         ax = self.figure.add_subplot(111)
         ax.axis('off')
+        self.figure.clear()
         self.canvas.draw() 
         self.plotted = False
 
@@ -150,7 +150,7 @@ class soilManagerDialog(QtWidgets.QDialog,baseGui):
 
 
     def openButton_clicked(self):   
-        filetypes = "Comma separated (*.csv);;Excel (*.xls, *.xlsx)"
+        filetypes = "Excel (*.xls, *.xlsx);;Comma separated (*.csv)"
         
         fileName,_ = QtWidgets.QFileDialog.\
             getOpenFileName(self,"File to take spectrum from", self.inputDir,filetypes) #2B
@@ -161,15 +161,17 @@ class soilManagerDialog(QtWidgets.QDialog,baseGui):
         if warning:
             self.warning(*warning)
             return
-        soilName = os.path.basename(fileName)
-        self.figure.clear()
+        soilFileName = os.path.basename(fileName)
+        self._clearForm()
         ax = self.figure.add_subplot(111)
         self.gl.drawSpectrum(ax)
         self.canvas.draw()
         self.plotted = True
-        self.soilLabel.setText("From file: {}".format(soilName))
+        self.soilLabel.setText("From file: {}".format(soilFileName))
         self.a45Label.setText("spectrum mod: {}".format(round(self.gl.a45,6)))
-        
+        self.soilNameField.setText(self.gl.soilName)
+        self.latField.setText(str(self.gl.coordinates[0]))
+        self.lonField.setText(str(self.gl.coordinates[1]))       
         self.addButton.setEnabled(True)
         self.modButton.setEnabled(False)
         self.remButton.setEnabled(False)
@@ -250,7 +252,7 @@ class soilManagerDialog(QtWidgets.QDialog,baseGui):
             return 
         self._redrawSoilList()
         self._clearForm()
-        self.message("Soil {} removed".format(self.soilName))
+        self.message("Soil {} removed".format(soilName))
         
     
     def modButton_clicked(self):

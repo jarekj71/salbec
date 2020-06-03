@@ -196,6 +196,8 @@ class soil():
         self._const[1355] = 7787.2
         self._const[1656] = 12161
         self._const[698] = 6932.8
+        self.soilName = None
+        self.coordinates = None
 
     def importFromFile(self,fileName):
         
@@ -203,21 +205,30 @@ class soil():
             return "Wrong file name or file path",None
 
         _,ext = os.path.splitext(fileName)
+        self.soilName = None
+        self.coordinates = None
         if ext in ['.xlsx','.xls']:
-            tmp = pd.read_excel(fileName)
+            _e = pd.read_excel(fileName,nrows=0)
+            if _e.columns.values[0] == "symbol" and type(_e.columns.values[1]) is str:
+                coords = pd.read_excel(fileName,nrows=2,index_col="symbol")
+                spectra = pd.read_excel(fileName,skiprows=[1,2])
+                self.soilName = coords.columns.values[0]
+                self.coordinates = coords[self.soilName].values
+            else:
+                spectra = pd.read_excel(fileName,header=None)
         elif ext == '.csv':
-            tmp = read_csv(fileName)
+            spectra = read_csv(fileName)
         else:
             return "Unrecognised file type",None
         
-        if len(tmp.columns) != 2:
+        if len(spectra.columns) != 2:
             return "Wrong number of columns in data","Only two columns, one with wavelength, second with reflectance are allowed"
             
-        wavelengths = tmp[0].values
+        wavelengths = spectra.iloc[:,0].values
         if wavelengths[0] != 350:
             return "Incorrect first column","Wavelength values must be between 350 and 2500"
         
-        reflectance = tmp[1].values
+        reflectance = spectra.iloc[:,1].values
         if reflectance.min() <0 or reflectance.max() >1:
             return "Incorrect second column","Reflectance values must be between 0 and 1"
         
