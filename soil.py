@@ -166,16 +166,7 @@ class soilDatabase():
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
         pickle.dump({},open(self._databaseFile,"wb+")) # dump empty dict
 
-
-#sldb = soilDatabase()
-
 #%%
-
-#sldb.listDatabase()
-#sldb.removeFromDatabase("__test")
-
-#%%
-
 def read_csv(fileName):
     sep = ","
     dec = "."

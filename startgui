@@ -10,13 +10,16 @@ from PyQt5 import QtWidgets
 import sys, os
 filePath = os.path.abspath(__file__)
 os.chdir(os.path.dirname(filePath))
-from GUI.soilManager import soilManagerDialog
+#from GUI.soilManager import soilManagerDialog
 from GUI.surface import curveFitWidget
 from GUI.daytime import selectDaysWidget
 from GUI.coordinates import latlonWidget
 from GUI.results import resultsWidget
 from GUI.setup import setupDialog
 from GUI.baseGui import baseGui
+#from soil import soilDatabase
+from GUI.soilManager import soilsCollections, soilsDialog
+
 app=QtWidgets.QApplication(sys.argv)
 
 #%%
@@ -27,9 +30,13 @@ class mainWindow(QtWidgets.QMainWindow):
         self.setFixedSize(1600,1024)
         #nazwa aplikacji
 
+        #global databases        
+        #self.soilDatabase = soilDatabase()
+        self.collections = soilsCollections()
+
         self.base = baseGui()
         self.base.reset()
-        self.soiImporter = soilManagerDialog()
+        self.soiImporter = soilsDialog()
         self.curveFit = curveFitWidget()
         self.coordsSet = latlonWidget()
         self.daysSelect = selectDaysWidget()
@@ -104,9 +111,10 @@ class mainWindow(QtWidgets.QMainWindow):
                 return
 
         self.results.runCalculation(*params)
-
+  
 
 if __name__ == '__main__':
     window = mainWindow()
     window.show()
-    sys.exit(app.exec_())
+    app.exec_()
+    sys.exit()
