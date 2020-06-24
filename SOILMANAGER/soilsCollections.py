@@ -7,6 +7,7 @@ Created on Fri Jun 19 10:24:41 2020
 """
 import os, pickle
 from PyQt5 import QtCore
+from PyQt5.QtCore import (pyqtSignal)
 from soil import soilDatabase
 
 #%%
@@ -22,6 +23,8 @@ class soilsCollections():
         self.collectionModel.setStringList(self.collections.keys()) # redraw soil list
         self.activeCollection = self._soilDatabase.soilNames #inital full list
         
+        self.selectionModel = QtCore.QStringListModel()
+        self.selectionModel.setStringList(self.getSoilsNames())
         
     #Database
     def getSoilsNames(self):
@@ -43,33 +46,41 @@ class soilsCollections():
     def _saveCollections(self):
         pickle.dump(self.collections,open(self._path,"wb+"))
     
+    def _reloadCollections(self):
+        self.collectionModel.setStringList(self.collections.keys()) # redraw soil list
+        self._saveCollections()
+
     def getModel(self):
         return self.collectionModel
     
     def getCollection(self,key):
-        return self.collections[key]
+        try:
+            return self.collections[key]
+        except KeyError:
+            return "collection {} does not exist",None 
     
     def addCollection(self,key,*values):
+        if key in self.collections.keys():
+            return "collection {} already exists",None
         self.collections[key] = set(values)
-        self.collectionModel.setStringList(self.collections.keys()) # redraw soil list
+        self._reloadCollections()
+        return None
     
+    def modifyCollection(self,key,*values):
+        if key not in self.collections.keys():
+            return "collection {} does not exist",None
+        self.collections[key] = set(values)
+        self._reloadCollections()            
+        return None
+   
     def removeCollection(self,key):
         try:
             del self.collections[key]
+            self._reloadCollections()
         except KeyError: 
-            pass
-    
-    def addToCollection(self,key,*values):
-        try: 
-            self.collections[key] = self.collection.union(values)
-        except KeyError: 
-            self.addCollection(key,*values) 
-            
-    def removeFromCollection(self,key,*values):
-        try:
-            self.collections[key] = self.collection.difference(values)
-        except KeyError:
-            pass
+            return "collection {} does not exist",None 
 
-    def getActiveCollection(self):
-        return self.activeCollection
+    def setActiveSelection(self,*activeSelection):
+        if activeSelection == []:
+            activeSelection = self.getSoilsNames()
+        self.selectionModel.setStringList(activeSelection)  

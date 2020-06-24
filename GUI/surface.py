@@ -116,26 +116,27 @@ class curvePlot(QtWidgets.QDialog,baseGui):
         if self.headerCheck.isChecked():
             text = header + os.linesep + line
         cb = QtWidgets.QApplication.clipboard()
-        cb.clear(mode=cb.Clipboard )
+        cb.clear(mode=cb.Clipboard)
         cb.setText(text, mode=cb.Clipboard)
        
 
 
 class curveFitWidget(QtWidgets.QWidget):
     coordSignal = pyqtSignal()
-    def __init__(self):
+    def __init__(self,collections):
         super().__init__()
 
         gridLayout = QtWidgets.QGridLayout()
         mainLayout = QtWidgets.QHBoxLayout()
-        self._soilDatabase = soilDatabase()
+        self._collections = collections
         self.curve = None
         self.modify = True
+        self._soil = None
         
         #SOIL
         self.soilCombo = QtWidgets.QComboBox()
         self.soilCombo.setMinimumWidth(150)
-        self.refreshSoilCombo()
+        self.soilCombo.setModel(self._collections.selectionModel)
         self.soilCombo.currentTextChanged.connect(self.soilCombo_currentTextChanged)
         soilLabel = QtWidgets.QLabel('&Soil')
         soilLabel.setBuddy(self.soilCombo)
@@ -164,16 +165,11 @@ class curveFitWidget(QtWidgets.QWidget):
         pltButton.clicked.connect(self.plotCurve)
         mainLayout.addLayout(gridLayout)
         mainLayout.addWidget(pltButton)
-        
-        
+         
         self.setLayout(mainLayout)
         self.soilCombo_currentTextChanged()
 
-    def refreshSoilCombo(self):
-        self._soil = None
-        self.soilCombo.clear()
-        self.soilCombo.addItems(self._soilDatabase.soilNames) 
-        
+       
     def coordinates(self):
         if self._soil is not None:
             return self._soil['coords']
@@ -183,7 +179,7 @@ class curveFitWidget(QtWidgets.QWidget):
         soilName = self.soilCombo.currentText()
         if soilName =='':
             return
-        soilPath = self._soilDatabase.getPath(soilName)
+        soilPath = self._collections.getSoilsDatabase().getPath(soilName)
         self._soil = pickle.load(open(soilPath,"rb"))
         self.coordSignal.emit()
         self.curve = None

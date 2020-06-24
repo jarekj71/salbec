@@ -8,34 +8,37 @@ Created on Tue May  5 09:27:40 2020
 
 #import os, pickle
 from PyQt5 import QtWidgets, QtCore
-#os.chdir("/home/jarek/Dropbox/CODE/albedo")
-#from soil import soil, soilDatabase
 from GUI.baseGui import baseGui
-from GUI.soilmanagerwidget import soilsManager
-from GUI.soilcollectionwidget import collectionsManager
-from GUI.soilsCollections import soilsCollections
-#app=QtWidgets.QApplication([])
+from SOILMANAGER._soilManagerWidget import _soilsManager
+from SOILMANAGER._collManagerWidget import _collectionsManager
+
 
 #%%
 class soilsDialog(QtWidgets.QDialog,baseGui):
-    def __init__(self):
+    def __init__(self,collections):
         super().__init__()
         self.setFixedSize(800,600)
         self.setWindowTitle("Soil manager")
         self.currentSoilName = None
-
-        self.collections = soilsCollections()
+        self.collections = collections
         self.listModel = self.collections.getSoilsDataModel()
+
         self.soilList = QtWidgets.QListView()
         self.soilList.setMaximumWidth(190)
         self.soilList.setModel(self.listModel)
+        closeButton = QtWidgets.QPushButton("&CLOSE")
+        closeButton.clicked.connect(self.accept)
+        
+        listLayout = QtWidgets.QVBoxLayout()
+        listLayout.addWidget(self.soilList)
+        listLayout.addWidget(closeButton)
 
         # tab with collection manager is 0
         # tab with soil manager is 1
         self.tab_changed(0) #inital position
         
-        self.collectionsManager = collectionsManager()
-        self.soilsManager = soilsManager(self.collections.getSoilsDatabase())
+        self.collectionsManager = _collectionsManager(self.soilList,self.collections)
+        self.soilsManager = _soilsManager(self.collections)
         
         tabs = QtWidgets.QTabWidget()
         tabs.addTab(self.collectionsManager,"Collection Manager")
@@ -44,26 +47,25 @@ class soilsDialog(QtWidgets.QDialog,baseGui):
 
         mainLayout = QtWidgets.QHBoxLayout()
         mainLayout.addWidget(tabs)
-        mainLayout.addWidget(self.soilList)
+        mainLayout.addLayout(listLayout)
         self.setLayout(mainLayout)
 
     def get_soil(self,index):
         soilName = self.listModel.data(index,QtCore.Qt.DisplayRole)
         self.currentSoilName = soilName
         self.soilsManager.soil_clicked(soilName)
-
     
-    def get_selection(self):
+    def nothing(self):
         pass
 
 
     def tab_changed(self,index):
         self.currentTab = index
         if self.currentTab == 1:
-            f = self.get_soil
             selectionMode = QtWidgets.QAbstractItemView.SingleSelection
+            self.soilList.clicked.connect(self.get_soil)
         else:
-            f = self.x
+            f = self.nothing
             selectionMode = QtWidgets.QAbstractItemView.MultiSelection
         
         try:
@@ -73,8 +75,3 @@ class soilsDialog(QtWidgets.QDialog,baseGui):
         self.soilList.clicked.connect(f)
         self.soilList.setSelectionMode(selectionMode)
 
-        
-#if __name__ == '__main__':
-#    window = soilsDialog()
-#    window.show()
- #   app.exec_()

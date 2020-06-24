@@ -236,7 +236,6 @@ class soil():
         return None
 
     
-    
     @property
     def a45(self):    
         a45 = sum(self._gl.values())
@@ -291,9 +290,34 @@ class soil():
             ax.set_title(title)
 
 #%%
+def exportSoilToFile(soilData,resolution=None,batch=False):
+    soil = [soilData['name']]+list(soilData['coords'])
+    if resolution is not None:
+        reflectance = soilData['reflectance']
+        wavelengths = soilData['wavelengths']
+        f = interp1d(wavelengths,reflectance,kind="quadratic")
+        wavelengths = np.arange(wavelengths.min(),wavelengths.max(),step=resolution)
+        reflectance = f(wavelengths)
+    soil += reflectance.tolist()
+    export = "\t".join(soil)
+    if not batch:
+        index = ["symbol","Lat","Lon"] + wavelengths.tolist()
+        export = [index,soil]
+    return export
 
-def batchImport(fileName):
-    sldb = soilDatabase()
+def batchExport(filename,database=None,resolution=None,*selection):
+    sldb = soilDatabase() if database is None else database
+    soilPath = soilDatabase.getPath(selection[0])
+    soilData = pickle.load(open(soilPath,"rb"))
+    soils = exportSoilToFile(soilData,resolution,batch=False)
+    for soilName in selection[1:]:
+        soilPath = soilDatabase.getPath(soilName)
+        soilData = pickle.load(open(soilPath,"rb"))
+        soils += exportSoilToFile(soilData,resolution,batch=True)
+    return soils
+
+def batchImport(fileName,database=None):
+    sldb = soilDatabase() if database is None else database
     coordinates = pd.read_excel(fileName,nrows=2,index_col="symbol")
     spectra = pd.read_excel(fileName,skiprows=[1,2],index_col="symbol")
     wavelengths = spectra.index.values

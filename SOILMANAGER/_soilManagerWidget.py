@@ -14,8 +14,8 @@ matplotlib.use('Qt5Agg')
 from soil import soil
 from GUI.baseGui import baseGui
 
-class soilsManager(QtWidgets.QWidget,baseGui):
-    def __init__(self,soilDatabase):
+class _soilsManager(QtWidgets.QWidget,baseGui):
+    def __init__(self,collections):
         super().__init__()
 
         self.figure = Figure(figsize=(7,4))
@@ -24,7 +24,7 @@ class soilsManager(QtWidgets.QWidget,baseGui):
         self._soil = None
         self.currentSoilName = None
         self.plotted = False
-        self._soilDatabase = soilDatabase
+        self._soilDatabase = collections.getSoilsDatabase()
 
         #upper layout
         self.soilLabel = QtWidgets.QLabel("")
@@ -82,6 +82,7 @@ class soilsManager(QtWidgets.QWidget,baseGui):
         buttonLayout.addWidget(self.plotButton)
         buttonLayout.addWidget(self.copyButton)
         buttonLayout.addStretch()
+
         
         #left layout
         leftLayout = QtWidgets.QVBoxLayout()
@@ -246,3 +247,4 @@ class soilsManager(QtWidgets.QWidget,baseGui):
         self._clearForm()
         self.message("Soil {} modified".format(self.currentSoilName))
         self.currentSoilName = None
+

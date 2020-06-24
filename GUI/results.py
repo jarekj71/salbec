@@ -111,7 +111,8 @@ class errorCurveDialog(QtWidgets.QDialog,baseGui):
         header = "\t".join(header)
         line = "\t".join(line)
         header = header+"latitude \t longitude"
-        line = line + "\t".join([str(b) for b in self.albedo.location])
+        #line = line + "\t".join([str(b) for b in self.albedo.location])
+        line = line + "\t".join([str(self.albedo.location.latitude),str(self.albedo.location.longitude)])
         
         text = line
         if self.headerCheck.isChecked():
