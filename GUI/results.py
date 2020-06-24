@@ -68,12 +68,16 @@ class errorCurveDialog(QtWidgets.QDialog,baseGui):
 
         
         descLayout = QtWidgets.QHBoxLayout()
-        for i,(name,value) in enumerate(description):
-            if name =='a45':
-                value = round(value,4)
-            text = "{}:{}".format(name,value)
-            descLayout.addWidget(QtWidgets.QLabel(text))
         
+        for i,(name,value) in enumerate(description):
+            if name =='\u03b145':
+                value = round(value,4)
+            text = "{}: {}".format(name,value)
+            descLayout.addWidget(QtWidgets.QLabel(text))
+           
+        if self.plottitle is None:
+            titleText = "{}:{}  {}:{}  {}:{:0.3}  {}:{:0.3}  {}:{:0.3}".format(*sum(description[1:],())) #trick unpack nested tuple
+            self.plottitle = titleText
         
         buttonsLayout = QtWidgets.QHBoxLayout()
         buttonsLayout.addStretch()
@@ -89,6 +93,7 @@ class errorCurveDialog(QtWidgets.QDialog,baseGui):
         self.setLayout(mainLayout)
         closeButton.clicked.connect(self.accept) 
         copyButton.clicked.connect(self.copyButton_clicked)
+        pdfButton.clicked.connect(self.pdfButton_clicked)
         
         figure.clear()
         self.albedo = albedo
@@ -98,11 +103,10 @@ class errorCurveDialog(QtWidgets.QDialog,baseGui):
     
     def setRecord(self,index):
         self.record = self.albedo.get_record(index)
-
     
     def copyButton_clicked(self):
         if self.record is None:
-            self._e.warning("No record selected","Nothing copied")
+            self.warning("No record selected","Nothing copied")
             return
         header = self.record.index.values.tolist()
         header = [str(b) for b in header]
@@ -111,7 +115,6 @@ class errorCurveDialog(QtWidgets.QDialog,baseGui):
         header = "\t".join(header)
         line = "\t".join(line)
         header = header+"latitude \t longitude"
-        #line = line + "\t".join([str(b) for b in self.albedo.location])
         line = line + "\t".join([str(self.albedo.location.latitude),str(self.albedo.location.longitude)])
         
         text = line
@@ -121,11 +124,10 @@ class errorCurveDialog(QtWidgets.QDialog,baseGui):
         cb.clear(mode=cb.Clipboard)
         cb.setText(text, mode=cb.Clipboard)
         return
-        
 
-    def drawButton_clicked(self):
+    def pdfButton_clicked(self):
         if self.albedo is None:
-            self._e.warning("Nothing to plot",None)
+            self.warning("Nothing to plot",None)
             return
         filetypes = "pdf (*pdf);;png (*png);;svg (*svg)"
         fileName,fileType = QtWidgets.QFileDialog.\
@@ -173,7 +175,8 @@ class resultsWidget(QtWidgets.QWidget,baseGui):
         soil_model = model
         start_day,end_day,interval = days
         self.errors = errors
-        self.soilParams = soilParams+list(zip(["latitude","longitude"],self.location))
+        print(soilParams)
+        self.soilParams = soilParams+list(zip(["lat","lon"],self.location))
         
         self.a = albedo()
         self.a.load_parameters(soil_model,self.location)
@@ -194,7 +197,7 @@ class resultsWidget(QtWidgets.QWidget,baseGui):
         day_of_year = self.data.iloc[row,0].item()
         self.a.store_current_date()
         self.a.set_date_by_day(day_of_year)
-        curvePlot = errorCurveDialog(self.a,"tytuł",self.errors,self.soilParams)
+        curvePlot = errorCurveDialog(self.a,None,self.errors,self.soilParams)
         curvePlot.setRecord(row)
         curvePlot.show()
         curvePlot.exec_()

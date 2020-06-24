@@ -121,7 +121,7 @@ class curvePlot(QtWidgets.QDialog,baseGui):
        
 
 
-class curveFitWidget(QtWidgets.QWidget):
+class curveFitWidget(QtWidgets.QWidget,baseGui):
     coordSignal = pyqtSignal()
     def __init__(self,collections):
         super().__init__()
@@ -147,17 +147,20 @@ class curveFitWidget(QtWidgets.QWidget):
         #PARANS
         self.T3DEdit = QtWidgets.QLineEdit('1.5')
         self.T3DEdit.setMaximumWidth(40)
-        label = QtWidgets.QLabel('&T3D')
+        label = QtWidgets.QLabel('&T3D (ratio)')
         label.setBuddy(self.T3DEdit)
         gridLayout.addWidget(label,0,1)
         gridLayout.addWidget(self.T3DEdit,0,2)       
         
         self.HSDEdit = QtWidgets.QLineEdit('25')
         self.HSDEdit.setMaximumWidth(40)
-        label = QtWidgets.QLabel('&HSD')
+        label = QtWidgets.QLabel('&HSD (mm)')
         label.setBuddy(self.HSDEdit)  
         gridLayout.addWidget(label,1,1)
-        gridLayout.addWidget(self.HSDEdit,1,2)   
+        gridLayout.addWidget(self.HSDEdit,1,2)
+        
+        self.T3DEdit.editingFinished.connect(lambda: self.validate_textEdit(1.005,2.5,1.5,"T3D"))
+        self.HSDEdit.editingFinished.connect(lambda: self.validate_textEdit(0.3,100,25,"HSD"))
         
         pltButton = QtWidgets.QPushButton("&SHOW")
         pltButton.setSizePolicy(QtWidgets.QSizePolicy.Fixed,QtWidgets.QSizePolicy.Preferred)

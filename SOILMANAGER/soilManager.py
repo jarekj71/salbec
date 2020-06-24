@@ -63,10 +63,10 @@ class soilsDialog(QtWidgets.QDialog,baseGui):
         self.currentTab = index
         if self.currentTab == 1:
             selectionMode = QtWidgets.QAbstractItemView.SingleSelection
-            self.soilList.clicked.connect(self.get_soil)
+            f = self.get_soil
         else:
-            f = self.nothing
             selectionMode = QtWidgets.QAbstractItemView.MultiSelection
+            f = self.nothing
         
         try:
             self.soilList.clicked.disconnect()

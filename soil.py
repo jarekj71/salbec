@@ -11,6 +11,7 @@ from scipy.optimize import least_squares
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator
 import copy, os, pickle
 #from io import StringIO będzie niezbędne przy rozbudowie
 
@@ -276,8 +277,8 @@ class soil():
 
     def drawSpectrum(self,ax,lines=True,title=False):
         ax.plot(self._wavelengths,self._reflectance)
-        ax.set_ylabel("reflectance")
-        ax.set_xlabel("wavelength (nm)")
+        ax.set_ylabel("Reflectance")
+        ax.set_xlabel("Wavelength (nm)")
         ax.set_ylim(0,0.7)
         if lines:
             ax.vlines(self._gl.keys(),ymin=0,ymax=0.7,colors='#8298A8',ls='--')
@@ -397,7 +398,7 @@ class soilCurve():
         self.__abcd = copy.copy(self.__res.x)
 
         params  = [self.name,self.T3D,self.HSD,self.a45_stright]
-        names = ["Soil","T3D","HSD","a45"]
+        names = ["Soil","T3D","HSD","\u03b145"]
         self._soil_params = list(zip(names,params))
             
     def get_soil_params(self):
@@ -406,26 +407,24 @@ class soilCurve():
 
     def drawFitted(self,ax=None,current=True):
         ax = ax or plt.gca()
-        if current:
-            p_x = np.array([0,10,20,45,65,75])
-            p_y = self.__aTs[p_x]
-            y_test = self.__aTS(self.__abcd,self.__x_test)
-            #label = "T3D: {}, HSD: {}".format(self.T3D,self.HSD)
-            #label +='\n'
-            #label += " a: {:0.3e}\n b: {:0.3e} \n c: {:0.3e} \n d: {:0.3e}".format(*self.__abcd)
-            #ax.scatter(p_x,p_y,s=10,c='#FA1121')
-            #ax.plot(self.__x_test,y_test,linewidth=2,label=label)
-            ax.plot(self.__x_test,y_test,linewidth=2)
-            
-            ax.set_ylim((0,1))
-            #ax.legend(loc='upper left',fontsize='large')
-        else:
-            for model,params in zip(self.models,self.params):
-                y_test = self.__aTS(model.x,self.__x_test)
-                ax.plot(self.__x_test,y_test,linewidth=2,label="T3D: {}, HSD: {}".format(*params))
-            ax.ylim((0,0.4))
-            #plt.xlim((0,91))
-            #ax.legend(loc='upper left',fontsize='large')  
+        p_x = np.array([0,10,20,45,65,75])
+        p_y = self.__aTs[p_x]
+        y_test = self.__aTS(self.__abcd,self.__x_test)
+        label = "T3D: {}     HSD: {}    \u03b145: {:0.4} \n".format(self.T3D,self.HSD,self.a45)
+        label += "a: {:0.4}    b: {:0.4} \nc: {:0.4}   d: {:0.4e}".format(*self.__abcd)
+        #ax.scatter(p_x,p_y,s=10,c='#FA1121')
+        #ax.plot(self.__x_test,y_test,linewidth=2,label=label)
+        ax.plot(self.__x_test,y_test,linewidth=2)
+        
+        ax.set_ylim((0,1))
+        ax.xaxis.set_major_locator(MultipleLocator(10))
+        ax.xaxis.set_minor_locator(MultipleLocator(5))
+        ax.yaxis.set_minor_locator(MultipleLocator(0.1))
+        ax.grid(which='both',linestyle=":",linewidth="1",color="#AAAAAA")
+        ax.text(5, 0.95, label, fontsize=12, linespacing = 1.5,
+                verticalalignment='top', bbox=dict(facecolor='white'))
+        ax.set_xlabel("Solar Zenith Angle")
+        ax.set_ylabel("Albedo")
      
            
 

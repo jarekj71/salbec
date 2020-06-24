@@ -37,7 +37,7 @@ class mapDialog(QtWidgets.QDialog,baseGui):
         self.lat = 90-y/self.div
         self.accept()
         
-class latlonWidget(QtWidgets.QWidget):
+class latlonWidget(QtWidgets.QWidget,baseGui):
     def __init__(self):
         super().__init__()
         mainLayout = QtWidgets.QGridLayout()
@@ -46,14 +46,17 @@ class latlonWidget(QtWidgets.QWidget):
         self.latEdit.setMaximumWidth(50)
         self.lonEdit = QtWidgets.QLineEdit()
         self.lonEdit.setMaximumWidth(50)
-        label = QtWidgets.QLabel('latitude')
+        label = QtWidgets.QLabel('latitude (D.D\u00B0)')
         label.setBuddy(self.latEdit)
         mainLayout.addWidget(label,1,0)
-        label = QtWidgets.QLabel('longitude')
+        label = QtWidgets.QLabel('longitude (D.D\u00B0)')
         label.setBuddy(self.lonEdit)
         mainLayout.addWidget(label,0,0)
         mainLayout.addWidget(self.lonEdit,0,1)
         mainLayout.addWidget(self.latEdit,1,1)
+       
+        self.latEdit.editingFinished.connect(lambda: self.validate_textEdit(-90,90,"","latitude"))
+        self.lonEdit.editingFinished.connect(lambda: self.validate_textEdit(-180,180,"","longitude"))
         
         self.blockCheck = QtWidgets.QCheckBox("&Block")
         self.blockCheck.setToolTip("Keep coordinates unchanged")
@@ -65,6 +68,7 @@ class latlonWidget(QtWidgets.QWidget):
         mainLayout.addWidget(mapButton,1,2)
         self.setLayout(mainLayout)
         mapButton.clicked.connect(self.mapButton_clicked)
+    
     
     def setCoordinatesFromSoil(self,coords):
         if self.blockCheck.isChecked():

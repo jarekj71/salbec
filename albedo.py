@@ -33,7 +33,7 @@ class albedo:
         self.__year = datetime.datetime.today().year if year is None else year
         self.__current_date = datetime.datetime(self.__year, 1, 1)
         self.__noon_time = self.__current_date.replace(hour=12) #12:00
-        self.__noon_time = None
+        #self.__noon_time = None
         self.__current_date_copy = self.__current_date
         self.__ax = None
         self.__errors = None
@@ -138,7 +138,7 @@ class albedo:
         return self.__albedos.mean()   
    
     
-    def get_mean_albedo_local_time(self,value):
+    def get_mean_albedo_slt_time(self,value):
         if self.__albedos.min() >= value:
             return None
         below_value = np.where(self.__albedos<value)[0].max()
@@ -153,7 +153,7 @@ class albedo:
         return local_time
 
     def _val_and_time(self,value,coef):
-        delta = self.get_mean_albedo_local_time(value)
+        delta = self.get_mean_albedo_slt_time(value)
         #noon_time = self.__current_date.replace(hour=12) #12:00
         if delta is None:
             return None,None
@@ -167,23 +167,35 @@ class albedo:
         
 
     def get_mean_albedo_times(self,value,errors):
-
+        #FIXME coś z formatowaniem czasów
         #zmodyfikować nazwy tab
-        utc_noon_time = self.__sun_time['noon']
-        delta = self.get_mean_albedo_local_time(value)
-        #print(value,delta)
-        am_utc_time = utc_noon_time - delta
-        pm_utc_time = utc_noon_time + delta
+        utc_noon_time = self.__sun_time['noon'].replace(microsecond=0)
+        utc_sunrise_time = self.__sun_time['sunrise'].replace(microsecond=0)
+        utc_sunset_time = self.__sun_time['sunrise'].replace(microsecond=0)
+        delta = self.get_mean_albedo_slt_time(value)
+    
+        utc_am_time = utc_noon_time - delta
+        utc_pm_time = utc_noon_time + delta
+       
+        slt_am_time = self.noon_time-delta
+        slt_pm_time = self.noon_time+delta
         
+        slt_sunrise = self.noon_time - (utc_noon_time-utc_sunrise_time)
+        slt_sunset = self.noon_time + (utc_sunset_time-utc_noon_time)
         
-        am_local_time = self.noon_time-delta
-        pm_local_time = self.noon_time+delta
+        day = [self.day_of_year,utc_am_time.date()]
+        utc_times=[utc_sunrise_time.time(),
+                   utc_am_time.time(),
+                   utc_noon_time.time(),
+                   utc_pm_time.time(),
+                   utc_sunset_time.time()]
+
         
-        
-        day = [self.day_of_year,am_utc_time.date()]
-        utc_times=[am_utc_time.time(),pm_utc_time.time()]
         times = []
         values = []
+        
+        values+=[1]
+        times+=[slt_sunrise.time()]
         
         for error in errors[::-1]:
             val = value*(1+error)
@@ -192,14 +204,14 @@ class albedo:
             times+=[v[1]]
         
         values+=[value]
-        times+=[am_local_time.time()]
+        times+=[slt_am_time.time()]
 
         for error in errors:
             val = value*(1-error)
             v = self._val_and_time(val,-1)
             values+=[v[0]]
             times+=[v[1]]            
-        
+       
         for error in errors[::-1]:
             val = value*(1-error)
             v = self._val_and_time(val,1)
@@ -207,7 +219,7 @@ class albedo:
             times+=[v[1]]    
         
         values.append(value)
-        times+=[pm_local_time.time()]
+        times+=[slt_pm_time.time()]
         
         for error in errors:
             val = value*(1+error)
@@ -215,6 +227,9 @@ class albedo:
             values+=[v[0]]
             times+=[v[1]]    
 
+        
+        values+=[1]
+        times+=[slt_sunset.time()]
         return day,utc_times,times,values
     
     def batch_mean_albedo_time(self,start_day=1,end_day=366,interval=1,errors=[]):
@@ -224,31 +239,28 @@ class albedo:
         results = []
         colnames = []
         self.store_current_date()
-        colnames += ['day','date','mean_albedo']
-        colnames += ['utm_am']
+        colnames += ['day','date','mean_albedo','max_error']
+        colnames += ["utm_sunrise",'utm_am_mat','utm_noon','utm_pm_mat','utm_sunset']# mat - mean albedo time
+        colnames +=['slt_sunrise']
         for error in errors[::-1]:
-            colnames +=['am-{}%'.format(int(error*100))]
-        colnames += ['am']
+            colnames +=['slt_am-{}%'.format(round(error*100))]
+        colnames += ['slt_am_mat']
         for error in errors:    
-            colnames +=['am+{}%'.format(int(error*100))]
-        colnames += ['utm_pm']
+            colnames +=['slt_am+{}%'.format(round(error*100))]
         for error in errors[::-1]:
-            colnames +=['pm-{}%'.format(int(error*100))]
-        colnames += ['pm']
+            colnames +=['slt_pm-{}%'.format(round(error*100))]
+        colnames += ['slt_pm_mat']
         for error in errors:    
-            colnames +=['pm+{}%'.format(int(error*100))]    
-        colnames +=['max_error']
+            colnames +=['slt_pm+{}%'.format(round(error*100))]    
+        colnames +=['slt_sunset']
         
         for day_of_year in range(start_day,end_day+1,interval):
             self.set_date_by_day(day_of_year)
-            #print(self.describe_day())
-            mean_albedo_value = self.get_mean_albedo()
-            max_error = self.get_albedo_max_error()
+            mean_albedo_value = round(self.get_mean_albedo(),5)
+            max_error = round(self.get_albedo_max_error(),5)
             w = self.get_mean_albedo_times(mean_albedo_value,errors)
-            n = len(w[2])//2
-            row = w[0]+[mean_albedo_value]+[w[1][0]]+w[2][:n]+[w[1][1]]+w[2][n:]+[max_error]
+            row = w[0]+[mean_albedo_value,max_error]+w[1]+w[2]
             results.append(row)
-            #results.append(w)
 
         self.restore_current_date()
         self.__results_data = pd.DataFrame(results,columns=colnames)
@@ -260,7 +272,7 @@ class albedo:
     def get_record(self,index):
         return None if self.__results_data is None else self.__results_data.iloc[index].copy()
         
-    def plot_time_curve(self,figure=None,region_name='',errors=[]):
+    def plot_time_curve(self,figure=None,suptitle='',errors=[]):
                 
         delta = datetime.timedelta(seconds=60)
         noon = self.noon_time
@@ -272,7 +284,9 @@ class albedo:
         #return times,y
 
         w = self.get_mean_albedo_times(mean_albedo_value,errors=errors)
-        n = len(w[2])//2
+        w_times = w[2][1:-1] # remove sunset and sunrise
+        w_values = w[3][1:-1]
+        n = len(w_times)//2
         central = n//2
 
         error_colors = self.__error_colors
@@ -283,23 +297,22 @@ class albedo:
         
         fig = plt.figure(figsize=(8,8)) if type(figure) is str or figure is None else figure
         gs = gridspec.GridSpec(2, 2, figure=fig,wspace=0.1,hspace=0.4)
-        
         #left
         ax0 = fig.add_subplot(gs[0,0])
         ax0.plot(times[0:span],y[0:span])
         tick_spacing=900
         ax0.xaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
-        error_labels = [str(error*100)+'%' for error in errors[::-1]]
+        error_labels = [str(round(error*100,2))+'%' for error in errors[::-1]]
         
-        for h,er,erc in zip(w[2][:central],error_labels,error_colors):
+        for h,er,erc in zip(w_times[:central],error_labels,error_colors):
             ax0.axvline(x = h,color=erc,linestyle="--",linewidth=1,label="error "+er)
 
-        ax0.axvline(x = w[2][central],color=mean_color_V,linestyle="--",linewidth=2, label="mean albedo time")
-        for h,erc in zip(w[2][central+1:n],error_colors[::-1]):
+        ax0.axvline(x = w_times[central],color=mean_color_V,linestyle="--",linewidth=2, label="mean albedo time")
+        for h,erc in zip(w_times[central+1:n],error_colors[::-1]):
             ax0.axvline(x = h,color=erc,linestyle="--",linewidth=1)
         
         ax0.axhline(y = mean_albedo_value,color=mean_color_H,linestyle="--",alpha=0.5,label="mean albedo value")
-        ax0.set_ylim(min(w[3])*0.9,max(w[3])*2)
+        ax0.set_ylim(min(w_values)*0.9,max(w_values)*2)
         ax0.plot(times[0:span],y[0:span],color=curve_color)
         ax0.set_xlabel("Solar Local Time")
         ax0.set_ylabel("Albedo")
@@ -313,14 +326,14 @@ class albedo:
         ax1.yaxis.tick_right()
         ax1.axhline(y = mean_albedo_value,color=mean_color_H,linestyle="--",alpha=0.5)
         
-        for h,er,erc in zip(w[2][n:n+central],error_labels,error_colors):
+        for h,er,erc in zip(w_times[n:n+central],error_labels,error_colors):
             ax1.axvline(x = h,color=erc,linestyle="--",linewidth=1,label="error "+er)
         
-        ax1.axvline(x = w[2][n+central],color=mean_color_V,linestyle="--",linewidth=2, label="mean albedo time")
-        for h,erc in zip(w[2][n+central+1:],error_colors[::-1]):
+        ax1.axvline(x = w_times[n+central],color=mean_color_V,linestyle="--",linewidth=2, label="mean albedo time")
+        for h,erc in zip(w_times[n+central+1:],error_colors[::-1]):
             ax1.axvline(x = h,color=erc,linestyle="--",linewidth=1)
         
-        ax1.set_ylim(min(w[3])*0.9,max(w[3])*2)
+        ax1.set_ylim(min(w_values)*0.9,max(w_values)*2)
         ax1.plot(times[-span:],y[-span:],color=curve_color)
         ax1.set_xlabel("Solar Local Time")
         ax1.set_title("Optimal p.m. time with errors")
@@ -333,39 +346,37 @@ class albedo:
         axn.xaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
         axn.set_xlim([datetime.time(0,0), datetime.time(23,59,59)])
         axn.axhline(y = mean_albedo_value,color=mean_color_H,linestyle="--",alpha=0.5)
-        axn.axvline(x = w[2][central],color=mean_color_V,linestyle="--",linewidth=2)
-        axn.axvline(x = w[2][n+central],color=mean_color_V,linestyle="--",linewidth=2)
+        axn.axvline(x = w_times[central],color=mean_color_V,linestyle="--",linewidth=2)
+        axn.axvline(x = w_times[n+central],color=mean_color_V,linestyle="--",linewidth=2)
         axn.set_title("Full day albedo change")
         axn.set_xlabel("Solar Local Time")
 
         for ax in fig.axes:
             ax.tick_params(axis='x', labelrotation=45, labelsize=8)
             ax.tick_params(axis='y', labelsize=8)
-            #plt.sca(ax) # aktywowanie axes
-            #plt.xticks(fontsize=8,rotation=45)
-            #plt.yticks(fontsize=8)
         plt.gcf().subplots_adjust(bottom=0.15)
-        plt.suptitle("region: {}, day: {}".format(region_name,self.__day_of_the_year))
+        fig.suptitle("Soil: {}, day: {}".format(suptitle,self.__day_of_the_year))
         
         if type(figure) is str:
             fig.savefig(figure)
         plt.close()
        
     def plot_time_bar(self,figure=None,time=True,labels=False,errors=[]):
+        #TODO: całość wymaga jeszcze weryfikacji
+       
         mean_albedo_value = self.get_mean_albedo()
         w = self.get_mean_albedo_times(mean_albedo_value,errors=errors)
         n = len(w[2])//2
-        central = n//2
         error_colors = self.__error_colors
         mean_color_V = self.__mean_color_V
         times = w[2][:n]
         xticks = [time_since_midnight(t).total_seconds() for t in times]
-        xmin = time_since_midnight(datetime.time(5,0,0)).total_seconds()
-        xmax = time_since_midnight(datetime.time(9,0,0)).total_seconds()
+        xmin = time_since_midnight(datetime.time(2,0,0)).total_seconds()
+        xmax = time_since_midnight(datetime.time(10,0,0)).total_seconds()
         trange = xmax-xmin
         regular_xticks = np.linspace(xmin,xmax,9)
         ticks = xticks if time is True else regular_xticks
-        
+        #TODO: Dodać wschód i zachód słońca
         #return (ticks,labels)
         fig = plt.figure(figsize=(8,0.4)) if type(figure) is str or figure is None else figure
         ax = fig.add_subplot(111)

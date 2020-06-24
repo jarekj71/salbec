@@ -35,12 +35,31 @@ class baseGui():
         msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
         msg.exec_()
         
+    def validate_textEdit(self,bottom,upper,default,what=""):
+        le = self.sender()
+        if isinstance(le, QtWidgets.QLineEdit):
+            try:
+                value = float(le.text())
+            except:
+                self.warning("Wrong or missing {}".format(what))
+                le.setText(str(default))
+                le.setFocus()
+                return
+            if value < bottom or value > upper:
+                print(value )
+                extra = "{} must be between {} and {}".format(what,bottom,upper)
+                self.warning("{} out of range".format(what),extra)
+                le.setText(str(default))
+                le.setFocus()
+                return 
+ 
     def reset(self):
         baseGui.__inputDirectory = os.getcwd()
         baseGui.__outputDirectory = os.getcwd()
         assets = 'ASSETS'
         if os.path.isdir(assets):
             baseGui.__inputDirectory = os.path.join(os.getcwd(),assets)
+   
     
     @property
     def inputDir(self):
