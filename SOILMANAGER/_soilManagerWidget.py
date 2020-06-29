@@ -24,7 +24,8 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         self._soil = None
         self.currentSoilName = None
         self.plotted = False
-        self._soilDatabase = collections.getSoilsDatabase()
+        self.collections = collections
+        self._soilDatabase = self.collections.getSoilsDatabase()
 
         #upper layout
         self.soilLabel = QtWidgets.QLabel("")
@@ -127,10 +128,6 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         
         return(latValue,lonValue)
     
-    def _redrawSoilList(self):
-        self.listModel.setStringList(self._soilDatabase.soilNames)
-
-
     def openButton_clicked(self):   
         filetypes = "Excel (*.xls, *.xlsx);;Comma separated (*.csv)"
         
@@ -218,7 +215,7 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         else:
             self.gl = None
             self._clearForm()
-            self._redrawSoilList()
+            self.collections.reloadSoilDataModel()
             self.message("Soil {} added to database".format(soilName))
         return
     
@@ -228,7 +225,7 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         if warning:
             self.warning(*warning)
             return 
-        self._redrawSoilList()
+        self.collections.reloadSoilDataModel()
         self._clearForm()
         self.message("Soil {} removed".format(soilName))
         
@@ -243,7 +240,7 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         if warning:
             self.warning(*warning)
             return
-        self._redrawSoilList()
+        self.collections.reloadSoilDataModel()
         self._clearForm()
         self.message("Soil {} modified".format(self.currentSoilName))
         self.currentSoilName = None

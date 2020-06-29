@@ -43,7 +43,7 @@ class setupDialog(QtWidgets.QDialog):
               
         buttonLayout = QtWidgets.QHBoxLayout()
         resetButton = QtWidgets.QPushButton("RESET")
-        resetButton.setToolTip("reset paths to default")
+        resetButton.setToolTip("reset paths to defaults")
         closeButton = QtWidgets.QPushButton("&CLOSE")
         buttonLayout.addStretch()
         buttonLayout.addWidget(resetButton)

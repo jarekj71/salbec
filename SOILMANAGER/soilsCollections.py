@@ -46,6 +46,9 @@ class soilsCollections():
     def _saveCollections(self):
         pickle.dump(self.collections,open(self._path,"wb+"))
     
+    def reloadSoilDataModel(self):
+        self.listModel.setStringList(self._soilDatabase.soilNames)
+    
     def _reloadCollections(self):
         self.collectionModel.setStringList(self.collections.keys()) # redraw soil list
         self._saveCollections()

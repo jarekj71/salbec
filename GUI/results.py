@@ -131,7 +131,7 @@ class errorCurveDialog(QtWidgets.QDialog,baseGui):
             return
         filetypes = "pdf (*pdf);;png (*png);;svg (*svg)"
         fileName,fileType = QtWidgets.QFileDialog.\
-            getSaveFileName(self,"File to plot results", self.inputDir,filetypes)
+            getSaveFileName(self,"File to plot results", self.outputDir,filetypes)
         if fileName=="":
             return
         file,ext = os.path.splitext(fileName)
@@ -175,7 +175,6 @@ class resultsWidget(QtWidgets.QWidget,baseGui):
         soil_model = model
         start_day,end_day,interval = days
         self.errors = errors
-        print(soilParams)
         self.soilParams = soilParams+list(zip(["lat","lon"],self.location))
         
         self.a = albedo()

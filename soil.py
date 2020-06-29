@@ -166,6 +166,14 @@ class soilDatabase():
             except Exception as e:
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
         pickle.dump({},open(self._databaseFile,"wb+")) # dump empty dict
+        
+    
+    def getSoil(self,soilName):
+        soilPath = self.getPath(soilName)
+        if soilPath is None:
+            return None
+        soilData = pickle.load(open(soilPath,"rb"))
+        return soilData
 
 #%%
 def read_csv(fileName):
@@ -291,52 +299,65 @@ class soil():
             ax.set_title(title)
 
 #%%
-def exportSoilToFile(soilData,resolution=None,batch=False):
-    soil = [soilData['name']]+list(soilData['coords'])
-    if resolution is not None:
-        reflectance = soilData['reflectance']
-        wavelengths = soilData['wavelengths']
+def _exportSoilToDf(soilData,resolution=0):
+    columns = [soilData['name']]
+    coords_df = pd.DataFrame(soilData['coords'],index=["lat","lon"],columns=columns)
+    #
+    reflectance = soilData['reflectance']
+    wavelengths = soilData['wavelengths']
+    if resolution:
         f = interp1d(wavelengths,reflectance,kind="quadratic")
         wavelengths = np.arange(wavelengths.min(),wavelengths.max(),step=resolution)
         reflectance = f(wavelengths)
-    soil += reflectance.tolist()
-    export = "\t".join(soil)
-    if not batch:
-        index = ["symbol","Lat","Lon"] + wavelengths.tolist()
-        export = [index,soil]
-    return export
+    
+    spectrum_df = pd.DataFrame(reflectance,index=wavelengths)
+    return coords_df,spectrum_df
+    
+#%%
+def exportSoilToFile(dataframes,filepath,resolution=0):
+    with pd.ExcelWriter(filepath) as writer:
+        dataframes[0].to_excel(writer,sheet_name='exported',startrow=0 , startcol=0,index_label='symbol')   
+        dataframes[1].to_excel(writer,sheet_name='exported',startrow=3, startcol=0,header=False) 
 
-def batchExport(filename,database=None,resolution=None,*selection):
+#%%
+def batchExport(filepath,selection,database=None,resolution=0):
     sldb = soilDatabase() if database is None else database
-    soilPath = soilDatabase.getPath(selection[0])
-    soilData = pickle.load(open(soilPath,"rb"))
-    soils = exportSoilToFile(soilData,resolution,batch=False)
-    for soilName in selection[1:]:
-        soilPath = soilDatabase.getPath(soilName)
-        soilData = pickle.load(open(soilPath,"rb"))
-        soils += exportSoilToFile(soilData,resolution,batch=True)
-    return soils
+    writer = pd.ExcelWriter(filepath)
+    index = True
+    for col, soilName in enumerate(selection):
+        soilData = sldb.getSoil(soilName)
+        dataframes = _exportSoilToDf(soilData,resolution)
+        if col > 0:
+            col+=1
+            index=False
+        dataframes[0].to_excel(writer,sheet_name='exported',startrow=0, startcol=col, index=index, index_label='symbol')   
+        dataframes[1].to_excel(writer,sheet_name='exported',startrow=3, startcol=col, index=index, header=False)
+    writer.save()        
 
-def batchImport(fileName,database=None):
+#%%
+def batchImport(fileName,database=None,listonly=False,selection=None):
     sldb = soilDatabase() if database is None else database
-    coordinates = pd.read_excel(fileName,nrows=2,index_col="symbol")
-    spectra = pd.read_excel(fileName,skiprows=[1,2],index_col="symbol")
-    wavelengths = spectra.index.values
-    names = coordinates.columns.values
+    try:
+        coordinates = pd.read_excel(fileName,nrows=2,index_col="symbol")
+        spectra = pd.read_excel(fileName,skiprows=[1,2],index_col="symbol")
+        wavelengths = spectra.index.values
+        names = coordinates.columns.values
+    except:
+        return None
+    if listonly:
+        return names
+    if selection is not None:
+        if not set(selection).issubset(names):
+            return None
+        names = selection
     for name in names:
-        print(name)
         coords = coordinates[name].values
         reflectance = spectra[name].values
         s = soil()
         s.importSeries(wavelengths,reflectance)
         sl = s.exportSoil(name,*coords)
         sldb.addToDatabase(sl)
-#%%
-#os.chdir('/home/jarek/Dropbox/PROJEKTY/albedo')
-#db = soilDatabase()
-#db.clearDatabase()
-#batchImport("ASSETS/spectra_batch.xlsx")
-
+    return None
 #%%
 class soilCurve():
     def __init__(self):
