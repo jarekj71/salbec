@@ -240,19 +240,19 @@ class albedo:
         colnames = []
         self.store_current_date()
         colnames += ['day','date','mean_albedo','max_error']
-        colnames += ["utm_sunrise",'utm_am_mat','utm_noon','utm_pm_mat','utm_sunset']# mat - mean albedo time
-        colnames +=['slt_sunrise']
+        colnames += ["UTM_sunrise",'UTM_am_mat','UTM_noon','UTM_pm_mat','UTM_sunset']# mat - mean albedo time
+        colnames +=['SLT_sunrise']
         for error in errors[::-1]:
-            colnames +=['slt_am-{}%'.format(round(error*100))]
-        colnames += ['slt_am_mat']
+            colnames +=['SLT_am-{}%'.format(round(error*100))]
+        colnames += ['SLT_am_mat']
         for error in errors:    
-            colnames +=['slt_am+{}%'.format(round(error*100))]
+            colnames +=['SLT_am+{}%'.format(round(error*100))]
         for error in errors[::-1]:
-            colnames +=['slt_pm-{}%'.format(round(error*100))]
-        colnames += ['slt_pm_mat']
+            colnames +=['SLT_pm-{}%'.format(round(error*100))]
+        colnames += ['SLT_pm_mat']
         for error in errors:    
-            colnames +=['slt_pm+{}%'.format(round(error*100))]    
-        colnames +=['slt_sunset']
+            colnames +=['SLT_pm+{}%'.format(round(error*100))]    
+        colnames +=['SLT_sunset']
         
         for day_of_year in range(start_day,end_day+1,interval):
             self.set_date_by_day(day_of_year)

@@ -11,7 +11,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib
 matplotlib.use('Qt5Agg')
-from soil import soil
+from soil import soil, exportSoilToText
 from GUI.baseGui import baseGui
 
 class _soilsManager(QtWidgets.QWidget,baseGui):
@@ -74,6 +74,12 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         self.plotButton.setToolTip("save soil curve as pdf")
         self.copyButton=QtWidgets.QPushButton("COPY")
         self.copyButton.setToolTip("copy soil to clipboard")
+        
+        self.resEdit = QtWidgets.QSpinBox()
+        self.resEdit.setRange(0,1000)
+        self.resEdit.setToolTip("Set resolution in nm of copied spectrum, 0 to keep original resolution")
+        label = QtWidgets.QLabel('res. (nm)')
+        label.setBuddy(self.resEdit)
 
         #
         buttonLayout = QtWidgets.QHBoxLayout()
@@ -82,6 +88,8 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         buttonLayout.addWidget(self.remButton)
         buttonLayout.addWidget(self.plotButton)
         buttonLayout.addWidget(self.copyButton)
+        buttonLayout.addWidget(label)
+        buttonLayout.addWidget(self.resEdit)
         buttonLayout.addStretch()
 
         
@@ -100,6 +108,7 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         self.modButton.clicked.connect(self.modButton_clicked)
         self.remButton.clicked.connect(self.remButton_clicked)
         self.plotButton.clicked.connect(self.plotButton_clicked)
+        self.copyButton.clicked.connect(self.copyButton_clicked)
         
 
     def _clearForm(self):
@@ -245,3 +254,11 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         self.message("Soil {} modified".format(self.currentSoilName))
         self.currentSoilName = None
 
+    def copyButton_clicked(self):
+        soilName = self.soilNameField.text()
+        soilData = self._soilDatabase.getSoil(soilName)
+        resolution = self.resEdit.value()
+        text = exportSoilToText(soilData,resolution)
+        cb = QtWidgets.QApplication.clipboard()
+        cb.clear(mode=cb.Clipboard)
+        cb.setText(text, mode=cb.Clipboard)

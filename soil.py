@@ -314,10 +314,22 @@ def _exportSoilToDf(soilData,resolution=0):
     return coords_df,spectrum_df
     
 #%%
-def exportSoilToFile(dataframes,filepath,resolution=0):
-    with pd.ExcelWriter(filepath) as writer:
-        dataframes[0].to_excel(writer,sheet_name='exported',startrow=0 , startcol=0,index_label='symbol')   
-        dataframes[1].to_excel(writer,sheet_name='exported',startrow=3, startcol=0,header=False) 
+
+def exportSoilToText(soilData,resolution=0):
+    dataframes = _exportSoilToDf(soilData,resolution)
+    df1 = dataframes[0]
+    df2 = dataframes[1]
+
+    text = ",".join(['symbol']+[str(x) for x in df1.columns.values.tolist()])+os.linesep
+
+    for index,record in df1.iterrows():
+        text += ",".join([str(index)] + [str(x) for x in record.values.tolist()]) + os.linesep
+
+    for index,record in df2.iterrows():
+        text += ",".join([str(index)] + [str(x) for x in record.values.tolist()]) + os.linesep
+
+    return text
+
 
 #%%
 def batchExport(filepath,selection,database=None,resolution=0):

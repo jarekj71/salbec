@@ -8,7 +8,7 @@ Created on Wed Jun 17 09:24:47 2020
 import os
 from PyQt5 import QtWidgets, QtCore
 from GUI.baseGui import baseGui
-from soil import batchExport, batchImport, exportSoilToFile
+from soil import batchExport, batchImport
 #%%
 
 class _collectionsManager(QtWidgets.QWidget,baseGui):
