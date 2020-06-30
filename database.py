@@ -10,13 +10,37 @@ Created on Sun Jun  7 20:29:55 2020
 import os, pickle
 
 class database():
-    def __init__(self,databaseName=None):
+    
+    def __init__(self,databaseName: str = None):
+        """
+        Init database
+
+        Parameters
+        ----------
+        databaseName : str, optional
+            Expected database name. The default is None.
+
+        Returns
+        -------
+        None.
+
+        """
+        
         self._databases = ".DATABASES"
         self._databaseDir = os.path.join(self._databases,databaseName) 
         self._databaseFile = os.path.join(self._databases,databaseName+".p")
         self._rebuildDatabase()
 
     def createDatabase(self):
+        """
+        Creates database based on init variables
+
+        Returns
+        -------
+        None.
+
+        """
+        
         if not os.path.isdir(self._databases):
             print("create database")
             os.mkdir(self._databases)
@@ -27,8 +51,23 @@ class database():
             pickle.dump({},open(self._databaseFile,"wb+")) # dump empty dict
         print("database exists")
             
-    def _entryName(self,entryName):
-        entryName = ''.join(entryName.split())
+    def _entryName(self,entryName: str) -> str:
+        """
+        Function remove white spaces from entry name
+
+        Parameters
+        ----------
+        entryName : str
+            string to remove spaces.
+
+        Returns
+        -------
+        str
+            string without white spaces.
+
+        """
+        
+        entryName = ''.join(entryName.split()) # remove spaces from name
         name,ext = os.path.splitext(entryName)
         if ext == '.sl': # remove extension if file name
             return name

@@ -49,7 +49,6 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         
         self.newButton.clicked.connect(self.newButton_clicked)
         resButton.clicked.connect(self.resetButton_clicked)
-        #clrButton.clicked.connect(self.clearButton_clicked)
         delButton.clicked.connect(self.deleteButton_clicked)
         modButton.clicked.connect(self.modifyButton_clicked)
         useButton.clicked.connect(self.useButton_clicked)
@@ -60,7 +59,6 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         rightLayout.addWidget(modButton)
         rightLayout.addWidget(delButton)
         rightLayout.addWidget(resButton)
-        #rightLayout.addWidget(clrButton)
         rightLayout.addStretch()
         rightLayout.addWidget(useButton)
 
@@ -175,7 +173,7 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         selection = self.exportText.toPlainText().split(",")
         database = self.soilCollections.getSoilsDatabase()
 
-        batchExport(self.import_file_name,selection,database,resolution)
+        batchExport(fileName,selection,database,resolution)
         self.message("{} Exported".format(fileName))
     
     def importImport_clicked(self):
@@ -230,10 +228,7 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         self.collectionsList.selectionModel().clear()
         self.exportText.clear()
         self.importText.clear()
-    
-    #def clearButton_clicked(self):
-    #    self._clearAll()
-    
+
     def useButton_clicked(self):
         selection = self._getSelection()
         self.soilCollections.setActiveSelection(*selection)
