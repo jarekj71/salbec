@@ -167,11 +167,10 @@ class albedo:
         
 
     def get_mean_albedo_times(self,value,errors):
-        #FIXME coś z formatowaniem czasów
-        #zmodyfikować nazwy tab
+
         utc_noon_time = self.__sun_time['noon'].replace(microsecond=0)
         utc_sunrise_time = self.__sun_time['sunrise'].replace(microsecond=0)
-        utc_sunset_time = self.__sun_time['sunrise'].replace(microsecond=0)
+        utc_sunset_time = self.__sun_time['sunset'].replace(microsecond=0)
         delta = self.get_mean_albedo_slt_time(value)
     
         utc_am_time = utc_noon_time - delta

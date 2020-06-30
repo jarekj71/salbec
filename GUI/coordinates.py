@@ -54,9 +54,9 @@ class latlonWidget(QtWidgets.QWidget,baseGui):
         mainLayout.addWidget(label,0,0)
         mainLayout.addWidget(self.lonEdit,0,1)
         mainLayout.addWidget(self.latEdit,1,1)
-       
-        self.latEdit.editingFinished.connect(lambda: self.validate_textEdit(-90,90,"","latitude"))
-        self.lonEdit.editingFinished.connect(lambda: self.validate_textEdit(-180,180,"","longitude"))
+
+        self.latEdit.editingFinished.connect(self.latEdited)
+        self.lonEdit.editingFinished.connect(self.lonEdited)
         
         self.blockCheck = QtWidgets.QCheckBox("&Block")
         self.blockCheck.setToolTip("Keep coordinates unchanged")
@@ -69,7 +69,18 @@ class latlonWidget(QtWidgets.QWidget,baseGui):
         self.setLayout(mainLayout)
         mapButton.clicked.connect(self.mapButton_clicked)
     
+    def latEdited(self):
+        self.validate_textEdit(-90,90,self.latDefault,"latitude")
+        self.latDefault = self.latEdit.text()
     
+    def lonEdited(self):
+        self.validate_textEdit(-180,180,self.lonDefault,"longitude")
+        self.lonDefault = self.lonEdit.text()
+        
+    def _setDefaultLatLon(self):
+        self.latDefault = self.latEdit.text()
+        self.lonDefault = self.lonEdit.text()
+        
     def setCoordinatesFromSoil(self,coords):
         if self.blockCheck.isChecked():
             return # do nothin
@@ -77,6 +88,8 @@ class latlonWidget(QtWidgets.QWidget,baseGui):
         if lat is not None and lon is not None:
             self.latEdit.setText(str(lat))
             self.lonEdit.setText(str(lon))
+        self.latDefault = self.latEdit.text()
+        self.lonDefault = self.lonEdit.text()
     
     def mapButton_clicked(self):
         theMap = mapDialog()
@@ -87,6 +100,8 @@ class latlonWidget(QtWidgets.QWidget,baseGui):
             self.latEdit.setText(str(theMap.lat))
             self.lonEdit.setText(str(theMap.lon))
         del theMap
+        self.latDefault = self.latEdit.text()
+        self.lonDefault = self.lonEdit.text()
     
     def getCoordinates(self):
         try:

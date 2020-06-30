@@ -8,7 +8,6 @@ Created on Sun Jun  7 20:29:55 2020
 
 
 import os, pickle
-from PyQt5 import QtWidgets
 
 class database():
     def __init__(self,databaseName=None):

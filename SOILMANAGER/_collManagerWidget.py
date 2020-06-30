@@ -27,7 +27,11 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         self.newCollection.setMaximumWidth(190)
        
         leftLayout = QtWidgets.QVBoxLayout()
-        leftLayout.addWidget(self.newCollection)
+        leftLayout.addWidget(QtWidgets.QLabel("Soils Collections"))
+        newLayout = QtWidgets.QHBoxLayout()
+        newLayout.addWidget(QtWidgets.QLabel("New"))
+        newLayout.addWidget(self.newCollection)
+        leftLayout.addLayout(newLayout)
         leftLayout.addWidget(self.collectionsList)
         self.collectionsList.clicked.connect(self.selectCollection)
         
@@ -38,15 +42,14 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         resButton = QtWidgets.QPushButton('&Reset')
         resButton.setToolTip("reset current selection to saved collection")
         delButton = QtWidgets.QPushButton('&Delete')
-        clrButton = QtWidgets.QPushButton('&Clear')
-        clrButton.setToolTip("clear all selections")
+
         useButton = QtWidgets.QPushButton('&USE')
         
         self.newButton.setEnabled(False)
         
         self.newButton.clicked.connect(self.newButton_clicked)
         resButton.clicked.connect(self.resetButton_clicked)
-        clrButton.clicked.connect(self.clearButton_clicked)
+        #clrButton.clicked.connect(self.clearButton_clicked)
         delButton.clicked.connect(self.deleteButton_clicked)
         modButton.clicked.connect(self.modifyButton_clicked)
         useButton.clicked.connect(self.useButton_clicked)
@@ -57,7 +60,7 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         rightLayout.addWidget(modButton)
         rightLayout.addWidget(delButton)
         rightLayout.addWidget(resButton)
-        rightLayout.addWidget(clrButton)
+        #rightLayout.addWidget(clrButton)
         rightLayout.addStretch()
         rightLayout.addWidget(useButton)
 
@@ -100,8 +103,9 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         self.exportText.setReadOnly(True)
         exportButtonsLayout = QtWidgets.QHBoxLayout()
         exportButtonsLayout.addWidget(exportSelect)
-        exportButtonsLayout.addWidget(exportExport)
         exportButtonsLayout.addWidget(exportClear)
+        exportButtonsLayout.addWidget(exportExport)
+
 
         exportLayout = QtWidgets.QVBoxLayout()
         exportLayout.addLayout(resolutionLayout)
@@ -221,14 +225,14 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
     def _clearCurrentSelection(self):
         self.soilListWidget.selectionModel().clear()
 
-    def _clearAll(self):
+    def clearAll(self):
         self._clearCurrentSelection()
         self.collectionsList.selectionModel().clear()
         self.exportText.clear()
         self.importText.clear()
     
-    def clearButton_clicked(self):
-        self._clearAll()
+    #def clearButton_clicked(self):
+    #    self._clearAll()
     
     def useButton_clicked(self):
         selection = self._getSelection()

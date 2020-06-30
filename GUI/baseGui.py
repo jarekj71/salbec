@@ -37,8 +37,10 @@ class baseGui():
         msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
         msg.exec_()
         
-    def validate_textEdit(self,bottom,upper,default,what=""):
+    def validate_textEdit(self,bottom,upper,default=None,what=""):
         le = self.sender()
+        if default is None:
+            default = le.text()    
         if isinstance(le, QtWidgets.QLineEdit):
             try:
                 value = float(le.text())

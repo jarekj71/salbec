@@ -15,7 +15,7 @@ from soil import soil, exportSoilToText
 from GUI.baseGui import baseGui
 
 class _soilsManager(QtWidgets.QWidget,baseGui):
-    def __init__(self,collections):
+    def __init__(self,soilList,collections):
         super().__init__()
 
         self.figure = Figure(figsize=(7,4))
@@ -24,6 +24,7 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         self._soil = None
         self.currentSoilName = None
         self.plotted = False
+        self.soilListWidget = soilList
         self.collections = collections
         self._soilDatabase = self.collections.getSoilsDatabase()
 
@@ -110,6 +111,10 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         self.plotButton.clicked.connect(self.plotButton_clicked)
         self.copyButton.clicked.connect(self.copyButton_clicked)
         
+    def clearAll(self):
+        self._clearForm()
+        self.soilListWidget.selectionModel().clear()
+    
 
     def _clearForm(self):
         self.latField.clear()
