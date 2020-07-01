@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from astral import sun 
 from astral import Observer
-import pickle
+import pickle, os
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.ticker as ticker
@@ -109,6 +109,7 @@ class albedo:
                 str(self.__sun_time['sunrise'].time()),str(self.__sun_time['noon'].time()),str(self.__sun_time['sunset'].time())                           
    
   
+    #TODO: usunąć batch function poza klasę  
     def batch_days(self,end_day):
         results = []
         self.store_current_date()
@@ -133,8 +134,6 @@ class albedo:
         above = np.where((elevations>=0) &  (elevations <=90))[0]
         self.__elevations = elevations[above]
         self.__albedos = self.__aTS(self.__elevations)
-        
-        #pickle.dump((self.__elevations,self.__albedos),open("x.p","wb+"))
         return self.__albedos.mean()   
    
     
@@ -231,6 +230,7 @@ class albedo:
         times+=[slt_sunset.time()]
         return day,utc_times,times,values
     
+    #TODO: usunąć batch function poza klasę
     def batch_mean_albedo_time(self,start_day=1,end_day=366,interval=1,errors=[]):
         if len(errors) > 0:
             errors = tuple(i for i in errors if 0 <= i <=1)
@@ -271,18 +271,55 @@ class albedo:
     def get_record(self,index):
         return None if self.__results_data is None else self.__results_data.iloc[index].copy()
         
-    def plot_time_curve(self,figure=None,suptitle='',errors=[]):
-                
-        delta = datetime.timedelta(seconds=60)
-        noon = self.noon_time
-        mean_albedo_value = self.get_mean_albedo()
+    def get_times_day(self, UTM = False):
+        delta = datetime.timedelta(seconds=self.__sec_in_min)
+        noon = self.__sun_time['noon'].replace(microsecond=0) if UTM else self.noon_time
         times_am = [(noon - n * delta).time() for n in range(len(self.__elevations))]
         times_pm = [(noon + n * delta).time() for n in range(len(self.__elevations))]
         times = times_am[::-1]+times_pm[1:]
+        return times
+    
+    def get_albedos_day(self):
         y = np.concatenate((np.flip(self.__albedos)[:-1],self.__albedos))
-        #return times,y
+        return y
+  
+    def _claculate_for_time_curve(self):
+        m = self.get_mean_albedo()
+        t = self.get_times_day()
+        y = self.get_albedos_day()
+        return m,t,y
+    
+    def calculate_for_time_slider(self):
+        #tmp_sec = self.__sec_in_min #temporary change values
+        #self.__sec_in_min = 1
+        _ = self.get_mean_albedo()
+        results = {} 
+        results['tSLT'] = self.get_times_day(UTM=False)
+        results['tUTM'] = self.get_times_day(UTM=True)
+        results['albedo'] = self.get_albedos_day()
+        #TODO: wydzielić w osobną funkcję w czasie refaktoringu
+        results['utc_sunrise_time'] = self.__sun_time['sunrise'].replace(microsecond=0)
+        results['utc_sunset_time'] = self.__sun_time['sunset'].replace(microsecond=0)        
+        results['utc_noon_time'] = self.__sun_time['noon'].replace(microsecond=0)
 
+        results['slt_sunrise_time'] = self.noon_time - (results['utc_noon_time']-results['utc_sunrise_time'])
+        results['slt_sunset_time'] = self.noon_time + (results['utc_sunset_time']-results['utc_noon_time'])
+        #self.__sec_in_min = tmp_sec
+        return results
+        
+    def copy_albedo_times_to_text(self):
+        results = self.calculate_for_time_slider()
+        text = "UTM,SLT,albedo"+os.linesep
+        for utm,slt,albedo in zip(results["tUTM"],results["tSLT"],results["albedo"]):
+            text += "{},{},{:0.5}{}".format(utm.strftime("%H:%M"),slt.strftime("%H:%M"),albedo,os.linesep)
+        return text
+    
+    
+    def plot_time_curve(self,figure=None,suptitle='',errors=[]):
+
+        mean_albedo_value,times,y = self._claculate_for_time_curve()
         w = self.get_mean_albedo_times(mean_albedo_value,errors=errors)
+
         w_times = w[2][1:-1] # remove sunset and sunrise
         w_values = w[3][1:-1]
         n = len(w_times)//2
@@ -297,6 +334,7 @@ class albedo:
         fig = plt.figure(figsize=(8,8)) if type(figure) is str or figure is None else figure
         gs = gridspec.GridSpec(2, 2, figure=fig,wspace=0.1,hspace=0.4)
         #left
+        
         ax0 = fig.add_subplot(gs[0,0])
         ax0.plot(times[0:span],y[0:span])
         tick_spacing=900
