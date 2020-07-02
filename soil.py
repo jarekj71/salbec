@@ -313,6 +313,7 @@ def _exportSoilToDf(soilData,resolution=0):
     spectrum_df = pd.DataFrame(reflectance,index=wavelengths)
     return coords_df,spectrum_df
     
+
 #%%
 
 def exportSoilToText(soilData,resolution=0):
@@ -373,7 +374,8 @@ def batchImport(fileName,database=None,listonly=False,selection=None):
 #%%
 class soilCurve():
     def __init__(self):
-        self.__x_test=np.concatenate((np.arange(0,90.),np.linspace(89,90,9)))
+        self.__x_test=np.concatenate((np.arange(0,89.),np.linspace(89,90,9)))
+        self.__y_test = None
         self.reset_plot()
         self.__indexes = {k:v for v,k in enumerate('abcd')}
         self.__aTs = None
@@ -407,6 +409,7 @@ class soilCurve():
     def reset_plot(self):
         self.models = []
         self._soil_params = []
+        self.__y_test = None
     
    
     def fit(self,GL,T3D,HSD,soilName=''):
@@ -429,10 +432,12 @@ class soilCurve():
         self.__res = least_squares(self.__fit_aTS,x0,args=(x_train,y_train))
         self.__reset_abcd = copy.copy(self.__res.x)
         self.__abcd = copy.copy(self.__res.x)
+        self.modify_curve_parameters(b=-2/200)
 
         params  = [self.name,self.T3D,self.HSD,self.a45_stright]
         names = ["Soil","T3D","HSD","\u03b145"]
         self._soil_params = list(zip(names,params))
+        self.__y_test = self.__aTS(self.__abcd,self.__x_test)
             
     def get_soil_params(self):
         return self._soil_params
@@ -442,12 +447,12 @@ class soilCurve():
         ax = ax or plt.gca()
         p_x = np.array([0,10,20,45,65,75])
         p_y = self.__aTs[p_x]
-        y_test = self.__aTS(self.__abcd,self.__x_test)
+        
         label = "T3D: {}     HSD: {}    \u03b145: {:0.4} \n".format(self.T3D,self.HSD,self.a45)
         label += "a: {:0.4}    b: {:0.4} \nc: {:0.4}   d: {:0.4e}".format(*self.__abcd)
         #ax.scatter(p_x,p_y,s=10,c='#FA1121')
         #ax.plot(self.__x_test,y_test,linewidth=2,label=label)
-        ax.plot(self.__x_test,y_test,linewidth=2)
+        ax.plot(self.__x_test,self.__y_test,linewidth=2)
         
         ax.set_ylim((0,1))
         ax.xaxis.set_major_locator(MultipleLocator(10))
@@ -458,9 +463,21 @@ class soilCurve():
                 verticalalignment='top', bbox=dict(facecolor='white'))
         ax.set_xlabel("Solar Zenith Angle")
         ax.set_ylabel("Albedo")
-     
-           
 
+    def exportCurve(self):
+        df = pd.DataFrame(self.__y_test,index=self.__x_test,columns=["albedo"])
+        return df        
+
+    def exportParams(self):
+        cindex = self.get_curve_params().keys()
+        cvalues = self.get_curve_params().values()
+        sindex,svalues = list(zip(*self.get_soil_params()))
+        index = list(sindex)+list(cindex)
+        values = list(svalues)+list(cvalues)
+        df = pd.Series(values,index=index)
+        return df
+        
+        
     def modify_curve_parameters(self,**kwargs):
         """
         

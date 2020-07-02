@@ -27,174 +27,183 @@ def time_since_midnight(t):
 
 class albedo:
     def __init__(self,step=1,year=None):
-        self.__a = sun 
-        self.__sec_in_min = 60
-        self.__step = step
-        self.__year = datetime.datetime.today().year if year is None else year
-        self.__current_date = datetime.datetime(self.__year, 1, 1)
-        self.__noon_time = self.__current_date.replace(hour=12) #12:00
-        #self.__noon_time = None
-        self.__current_date_copy = self.__current_date
-        self.__ax = None
-        self.__errors = None
-        self.__results_data = None
+        self._a = sun #module sun
+        self._sec_in_min = 60
+        self._step = step
+        self._year = datetime.datetime.today().year if year is None else year
+        self._current_date = datetime.datetime(self._year, 1, 1)
+        self.colnames = None
+        self._twelve_noon = self._current_date.replace(hour=12) #12:00
+
+        self._ax = None
+        self._errors = []
+        self._utm_time = None
+        self._slt_time = {}
+        self._agregated_values = None
                 
-        self.__error_colors = ['#AF1E1E','#F2A62C','#F0F22C']
-        self.__mean_color_V = '#00A203'
-        self.__mean_color_H = '#C1CACF'
-        self.__curve_color = '#CC6600'
+        self._error_colors = ['#AF1E1E','#FA861E','#F2A62C','#F0F22C']
+        self._mean_color_V = '#00A203'
+        self._mean_color_H = '#C1CACF'
+        self._curve_color = '#CC6600'
     
-    def load_parameters(self,soil_curve,location):
-        self.__soil = soil_curve
-        self.__location = Observer(*location)
+    def load_parameters(self,soil_curve,location,errors=[]):
+        self._soil = soil_curve
+        self._location = Observer(*location)
     
-    def store_current_date(self):
-        self.__current_date_copy = self.__current_date
-        
-    def restore_current_date(self):
-        self.__current_date = self.__current_date_copy
-    
-    def today(self):
-        return datetime.datetime.today().date()
+        if len(errors) > 0:
+            errors = tuple(i for i in errors if 0 <= i <=1)
+        self._errors = errors
+
+        colnames = []
+        colnames += ['day','date','mean_albedo','max_error']
+        colnames += ["UTM_sunrise",'UTM_am_mat','UTM_noon','UTM_pm_mat','UTM_sunset']# mat - mean albedo time
+        colnames +=['SLT_sunrise']
+        for error in errors[::-1]:
+            colnames +=['SLT_am-{}%'.format(round(error*100))]
+        colnames += ['SLT_am_mat']
+        for error in errors:    
+            colnames +=['SLT_am+{}%'.format(round(error*100))]
+        for error in errors[::-1]:
+            colnames +=['SLT_pm-{}%'.format(round(error*100))]
+        colnames += ['SLT_pm_mat']
+        for error in errors:    
+            colnames +=['SLT_pm+{}%'.format(round(error*100))]    
+        colnames +=['SLT_sunset']
+        self.colnames = colnames
     
     def set_year(self,year):
-        self.__year = year
+        self._year = year
     
     def set_date_by_day(self,day_of_the_year,year=None):
         if year is not None:
-            self.__year = year
-        self.__day_of_the_year = day_of_the_year
-        self.__current_date = datetime.datetime(self.__year, 1, 1) + datetime.timedelta(self.__day_of_the_year- 1)
-        self.__noon_time = self.__current_date.replace(hour=12) #12:00
-        self.__sun_time = self.__a.sun(self.__location,self.__current_date)
+            self._year = year
+        self._day_of_the_year = day_of_the_year
+        self._current_date = datetime.datetime(self._year, 1, 1) + datetime.timedelta(self._day_of_the_year- 1)
+        self._calculate_day()
     
     def set_date_by_date(self,day,month,year=None):
         if year is None:
-            year = self.__year
-        self.__current_date = datetime.datetime(year,month,day)
-        self.__sun_time = self.__a.sun(self.__location,self.__current_date)
-        self.__noon_time = self.__current_date.replace(hour=12) #12:00
-    
+            year = self._year
+        self._current_date = datetime.datetime(year,month,day)
+        self._day_of_the_year = self._current_date.timetuple().tm_yday
+        self._calculate_day()
+        
+    @property
+    def errors(self):
+        return self._errors
     
     @property
     def location(self):
-        return self.__location
+        return self._location
     
     @property    
-    def current_date(self):
-        return self.__current_date
+    def date(self):
+        return self._current_date
     
     def print_current_date(self):
-        return str(self.__current_date)
+        return str(self._current_date)
     
     @property
     def day_of_year(self):
-        return self.__current_date.timetuple().tm_yday
+        return self._day_of_the_year
     
     @property
     def half_length_of_the_day(self):
-        return self.__sun_time['sunset']-self.__sun_time['noon']
+        return self._utm_time['sunset']-self._utm_time['noon']
  
     @property
-    def noon_time(self):
-        return self.__noon_time
+    def slt_noon_time(self):
+        return self._twelve_noon
     
-    def __angle(self,step,i):
-        h = self.__sun_time['noon'] + datetime.timedelta(0,self.__sec_in_min*step*i)
-        an = self.__a.elevation(self.__location,h)
+    def _angle(self,step,i):
+        h = self._utm_time['noon'] + datetime.timedelta(0,self._sec_in_min*step*i)
+        an = self._a.elevation(self._location,h)
         return 90-an
-
-    def describe_day(self):
-        return self.print_current_date(),self.__angle(self.__step,0),str(self.half_length_of_the_day), \
-                str(self.__sun_time['sunrise'].time()),str(self.__sun_time['noon'].time()),str(self.__sun_time['sunset'].time())                           
-   
-  
-    #TODO: usunąć batch function poza klasę  
-    def batch_days(self,end_day):
-        results = []
-        self.store_current_date()
-        current_day = self.day_of_year
-        for day_of_the_year in range(current_day,current_day+end_day):
-            results.append(self.describe_day())
-        self.restore_current_date()
-        return results
         
-    def __aTS(self,X):
-        return np.exp((self.__soil[0]+self.__soil[2]*X)/
-                      (1+self.__soil[1]*X+self.__soil[3]*X**2))
+    def _aTS(self,X): #albedo curve
+        return np.exp((self._soil[0]+self._soil[2]*X)/
+                      (1+self._soil[1]*X+self._soil[3]*X**2))
 
-    def get_mean_albedo(self):
-        
+    def _calculate_day(self):
+        self._utm_time = self._a.sun(self._location,self._current_date)
+        self._twelve_noon = self._current_date.replace(hour=12) #12:00
         half_day = self.half_length_of_the_day
-        n_steps = int(half_day.seconds/(self.__sec_in_min*self.__step))
+        n_steps = int(half_day.seconds/(self._sec_in_min*self._step))
         
-        elevations = [self.__angle(self.__step,i) for i in range(n_steps)]
+        elevations = [self._angle(self._step,i) for i in range(n_steps)]
         elevations = elevations + [90]
         elevations = np.array(elevations)
         above = np.where((elevations>=0) &  (elevations <=90))[0]
-        self.__elevations = elevations[above]
-        self.__albedos = self.__aTS(self.__elevations)
-        return self.__albedos.mean()   
-   
+        self._elevations = elevations[above]
+        self._albedos = self._aTS(self._elevations)
+        
+        self._utm_time['noon'] = self._utm_time['noon'].replace(microsecond=0)
+        self._utm_time['sunrise'] = self._utm_time['sunrise'].replace(microsecond=0)
+        self._utm_time['sunset'] = self._utm_time['sunset'].replace(microsecond=0)
+        
+        self._slt_time['noon'] = self._twelve_noon
+        self._slt_time['sunrise']  = self._slt_time['noon'] - (self._utm_time['noon'] - self._utm_time['sunrise'])
+        self._slt_time['sunset']  = self._slt_time['noon'] + (self._utm_time['sunset'] - self._utm_time['noon'])
     
-    def get_mean_albedo_slt_time(self,value):
-        if self.__albedos.min() >= value:
+    def describe_day(self):
+        return self.print_current_date(),self._angle(self._step,0),str(self.half_length_of_the_day), \
+            self._utm_time['sunrise'].strftime("%H:%M:%S"), \
+            self._utm_time['noon'].strftime("%H:%M:%S"), \
+            self._utm_time['sunset'].strftime("%H:%M:%S")                           
+
+    def get_mean_albedo(self):
+        return self._albedos.mean()   
+
+    def get_albedo_max_error(self):
+        mean_value = self.get_mean_albedo()
+        min_value = self._albedos.min()
+        return (1-min_value/mean_value)*100    
+    
+    def get_mean_albedo_time_delta(self,value):
+        if self._albedos.min() >= value:
             return None
-        below_value = np.where(self.__albedos<value)[0].max()
-        start = below_value * self.__sec_in_min
-        stop = below_value * self.__sec_in_min + self.__sec_in_min
-        tune = [self.__angle(self.__step/60,i) for i in range(start,stop)]
+        below_value = np.where(self._albedos<value)[0].max()
+        start = below_value * self._sec_in_min
+        stop = below_value * self._sec_in_min + self._sec_in_min
+        tune = [self._angle(self._step/60,i) for i in range(start,stop)]
         tune = np.array(tune)
 
-        albedos_tune = self.__aTS(tune)
+        albedos_tune = self._aTS(tune)
         below_value_tune = np.where(albedos_tune<value)[0].max()     
         local_time = datetime.timedelta(0,60*int(below_value)+int(below_value_tune))
         return local_time
 
     def _val_and_time(self,value,coef):
-        delta = self.get_mean_albedo_slt_time(value)
-        #noon_time = self.__current_date.replace(hour=12) #12:00
+        delta = self.get_mean_albedo_time_delta(value)
         if delta is None:
             return None,None
         else:
-            return value,(self.noon_time+coef*delta).time()
-
-    def get_albedo_max_error(self):
-        mean_value = self.get_mean_albedo()
-        min_value = self.__albedos.min()
-        return (1-min_value/mean_value)*100
+            return value,(self._twelve_noon+coef*delta).time()
         
 
-    def get_mean_albedo_times(self,value,errors):
-
-        utc_noon_time = self.__sun_time['noon'].replace(microsecond=0)
-        utc_sunrise_time = self.__sun_time['sunrise'].replace(microsecond=0)
-        utc_sunset_time = self.__sun_time['sunset'].replace(microsecond=0)
-        delta = self.get_mean_albedo_slt_time(value)
+    def get_albedo_main_times(self):
+        value = self.get_mean_albedo()
+        delta = self.get_mean_albedo_time_delta(value)
     
-        utc_am_time = utc_noon_time - delta
-        utc_pm_time = utc_noon_time + delta
-       
-        slt_am_time = self.noon_time-delta
-        slt_pm_time = self.noon_time+delta
-        
-        slt_sunrise = self.noon_time - (utc_noon_time-utc_sunrise_time)
-        slt_sunset = self.noon_time + (utc_sunset_time-utc_noon_time)
-        
-        day = [self.day_of_year,utc_am_time.date()]
-        utc_times=[utc_sunrise_time.time(),
-                   utc_am_time.time(),
-                   utc_noon_time.time(),
-                   utc_pm_time.time(),
-                   utc_sunset_time.time()]
-
+        utm_am_time = self._utm_time['noon'] - delta
+        utm_pm_time = self._utm_time['noon'] + delta
+        slt_am_time = self._slt_time['noon'] - delta
+        slt_pm_time = self._slt_time['noon'] + delta
+      
+        day = [self.day_of_year,utm_am_time.date()]
+        utm_times=[self._utm_time['sunrise'].time(),
+                   utm_am_time.time(),
+                   self._utm_time['noon'].time(),
+                   utm_pm_time.time(),
+                   self._utm_time['sunset'].time()]
         
         times = []
         values = []
         
         values+=[1]
-        times+=[slt_sunrise.time()]
+        times+=[self._slt_time['sunrise'].time()]
         
+        errors = self._errors
         for error in errors[::-1]:
             val = value*(1+error)
             v = self._val_and_time(val,-1)
@@ -227,108 +236,80 @@ class albedo:
 
         
         values+=[1]
-        times+=[slt_sunset.time()]
-        return day,utc_times,times,values
-    
-    #TODO: usunąć batch function poza klasę
-    def batch_mean_albedo_time(self,start_day=1,end_day=366,interval=1,errors=[]):
-        if len(errors) > 0:
-            errors = tuple(i for i in errors if 0 <= i <=1)
-        
-        results = []
-        colnames = []
-        self.store_current_date()
-        colnames += ['day','date','mean_albedo','max_error']
-        colnames += ["UTM_sunrise",'UTM_am_mat','UTM_noon','UTM_pm_mat','UTM_sunset']# mat - mean albedo time
-        colnames +=['SLT_sunrise']
-        for error in errors[::-1]:
-            colnames +=['SLT_am-{}%'.format(round(error*100))]
-        colnames += ['SLT_am_mat']
-        for error in errors:    
-            colnames +=['SLT_am+{}%'.format(round(error*100))]
-        for error in errors[::-1]:
-            colnames +=['SLT_pm-{}%'.format(round(error*100))]
-        colnames += ['SLT_pm_mat']
-        for error in errors:    
-            colnames +=['SLT_pm+{}%'.format(round(error*100))]    
-        colnames +=['SLT_sunset']
-        
-        for day_of_year in range(start_day,end_day+1,interval):
-            self.set_date_by_day(day_of_year)
-            mean_albedo_value = round(self.get_mean_albedo(),5)
-            max_error = round(self.get_albedo_max_error(),5)
-            w = self.get_mean_albedo_times(mean_albedo_value,errors)
-            row = w[0]+[mean_albedo_value,max_error]+w[1]+w[2]
-            results.append(row)
+        times+=[self._slt_time['sunset'].time()]
+        return day,utm_times,times,values
 
-        self.restore_current_date()
-        self.__results_data = pd.DataFrame(results,columns=colnames)
-
-    
-    def get_data(self):
-        return self.__results_data
-    
-    def get_record(self,index):
-        return None if self.__results_data is None else self.__results_data.iloc[index].copy()
         
-    def get_times_day(self, UTM = False):
-        delta = datetime.timedelta(seconds=self.__sec_in_min)
-        noon = self.__sun_time['noon'].replace(microsecond=0) if UTM else self.noon_time
-        times_am = [(noon - n * delta).time() for n in range(len(self.__elevations))]
-        times_pm = [(noon + n * delta).time() for n in range(len(self.__elevations))]
+    def _get_times_day_serie(self, UTM = False):
+        delta_step = datetime.timedelta(seconds=self._sec_in_min)
+        noon = self._utm_time['noon'] if UTM else self._slt_time['noon']
+        times_am = [(noon - n * delta_step).time() for n in range(len(self._elevations))]
+        times_pm = [(noon + n * delta_step).time() for n in range(len(self._elevations))]
         times = times_am[::-1]+times_pm[1:]
         return times
     
-    def get_albedos_day(self):
-        y = np.concatenate((np.flip(self.__albedos)[:-1],self.__albedos))
-        return y
-  
-    def _claculate_for_time_curve(self):
-        m = self.get_mean_albedo()
-        t = self.get_times_day()
-        y = self.get_albedos_day()
-        return m,t,y
+    def _get_albedos_day_serie(self):
+        return  np.concatenate((np.flip(self._albedos)[:-1],self._albedos))
+          
+    def _get_elevations_day_serie(self):
+        return np.concatenate((np.flip(self._elevations)[:-1],self._elevations))
     
-    def calculate_for_time_slider(self):
-        #tmp_sec = self.__sec_in_min #temporary change values
-        #self.__sec_in_min = 1
-        _ = self.get_mean_albedo()
-        results = {} 
-        results['tSLT'] = self.get_times_day(UTM=False)
-        results['tUTM'] = self.get_times_day(UTM=True)
-        results['albedo'] = self.get_albedos_day()
-        #TODO: wydzielić w osobną funkcję w czasie refaktoringu
-        results['utc_sunrise_time'] = self.__sun_time['sunrise'].replace(microsecond=0)
-        results['utc_sunset_time'] = self.__sun_time['sunset'].replace(microsecond=0)        
-        results['utc_noon_time'] = self.__sun_time['noon'].replace(microsecond=0)
+    def _aggregate(self):
+        aggregate = {} 
+        aggregate['tSLT'] = self._get_times_day_serie(UTM=False)
+        aggregate['tUTM'] = self._get_times_day_serie(UTM=True)
+        aggregate['albedo'] = self._get_albedos_day_serie()
+        aggregate['elevtions'] = self._get_elevations_day_serie()
 
-        results['slt_sunrise_time'] = self.noon_time - (results['utc_noon_time']-results['utc_sunrise_time'])
-        results['slt_sunset_time'] = self.noon_time + (results['utc_sunset_time']-results['utc_noon_time'])
-        #self.__sec_in_min = tmp_sec
-        return results
+        aggregate['utc_sunrise_time'] = self._utm_time['sunrise']
+        aggregate['utc_sunset_time'] = self._utm_time['sunset']
+        aggregate['utc_noon_time'] = self._utm_time['noon']
+
+        aggregate['slt_sunrise_time'] = self._slt_time['sunrise']
+        aggregate['slt_sunset_time'] = self._slt_time['sunset']
+        self._agregated_values = aggregate
+
         
-    def copy_albedo_times_to_text(self):
-        results = self.calculate_for_time_slider()
-        text = "UTM,SLT,albedo"+os.linesep
-        for utm,slt,albedo in zip(results["tUTM"],results["tSLT"],results["albedo"]):
-            text += "{},{},{:0.5}{}".format(utm.strftime("%H:%M"),slt.strftime("%H:%M"),albedo,os.linesep)
-        return text
+    def time_slider(self):
+        self._aggregate()
+        return self._agregated_values
     
+    def times_DataFrame(self):
+        if self._agregated_values is None:
+            self._aggregate()
+        
+        a = self._agregated_values
+        colnames = ["UTM","SLT","albedo","sun_elev"]
+        df = pd.DataFrame(dict(zip(colnames,[a["tUTM"],a["tSLT"],a["albedo"],a['elevtions']])))
+        self._agregated_values = None
+        return df
     
-    def plot_time_curve(self,figure=None,suptitle='',errors=[]):
-
-        mean_albedo_value,times,y = self._claculate_for_time_curve()
-        w = self.get_mean_albedo_times(mean_albedo_value,errors=errors)
+    def get_record(self,header=False):
+        w = self.get_albedo_main_times()
+        mean_albedo = round(self.get_mean_albedo(),5)
+        max_error = round(self.get_albedo_max_error(),5)
+        record = w[0]+[mean_albedo,max_error]+w[1]+w[2]
+        if header:
+            return pd.Series(record,index=self.colnames)
+        else:
+            return record
+    
+    def plot_time_curve(self,figure=None,suptitle=''):
+        mean_albedo_value = self.get_mean_albedo()
+        errors = self._errors
+        times =self._get_times_day_serie()
+        y = self._get_albedos_day_serie()
+        w = self.get_albedo_main_times()
 
         w_times = w[2][1:-1] # remove sunset and sunrise
         w_values = w[3][1:-1]
         n = len(w_times)//2
         central = n//2
 
-        error_colors = self.__error_colors
-        mean_color_V = self.__mean_color_V
-        mean_color_H = self.__mean_color_H
-        curve_color = self.__curve_color
+        error_colors = self._error_colors
+        mean_color_V = self._mean_color_V
+        mean_color_H = self._mean_color_H
+        curve_color = self._curve_color
         span = 150
         
         fig = plt.figure(figsize=(8,8)) if type(figure) is str or figure is None else figure
@@ -392,7 +373,7 @@ class albedo:
             ax.tick_params(axis='x', labelrotation=45, labelsize=8)
             ax.tick_params(axis='y', labelsize=8)
         plt.gcf().subplots_adjust(bottom=0.15)
-        fig.suptitle("Soil: {}, day: {}".format(suptitle,self.__day_of_the_year))
+        fig.suptitle("Soil: {}, day: {}".format(suptitle,self._day_of_the_year))
         
         if type(figure) is str:
             fig.savefig(figure)
@@ -402,10 +383,10 @@ class albedo:
         #TODO: całość wymaga jeszcze weryfikacji
        
         mean_albedo_value = self.get_mean_albedo()
-        w = self.get_mean_albedo_times(mean_albedo_value,errors=errors)
+        w = self.get_albedo_main_times(mean_albedo_value,errors=errors)
         n = len(w[2])//2
-        error_colors = self.__error_colors
-        mean_color_V = self.__mean_color_V
+        error_colors = self._error_colors
+        mean_color_V = self._mean_color_V
         times = w[2][:n]
         xticks = [time_since_midnight(t).total_seconds() for t in times]
         xmin = time_since_midnight(datetime.time(2,0,0)).total_seconds()
@@ -435,7 +416,24 @@ class albedo:
         ax.set_xticks(ticks)
         if not labels:
             ax.set_xticklabels([])
+        
+ 
+def batch_day_description(albedo,start_day=1,end_day=355,ndays=None):
+    
+    if ndays is not None:
+        end_day = start_day+ndays
+    results = []
+    for day_of_the_year in range(start_day,end_day):
+        albedo.set_date_by_day(day_of_the_year)
+        results.append(albedo.describe_day())
+    return results        
 
 
-        
-        
+def batch_albedo_main_times(albedo,start_day=1,end_day=365,interval=1):
+
+    results = []
+    for day_of_year in range(start_day,end_day+1,interval):
+        albedo.set_date_by_day(day_of_year)
+        record = albedo.get_record()
+        results.append(record)
+    return pd.DataFrame(results,columns=albedo.colnames)

@@ -9,6 +9,7 @@ Created on Fri Jan 10 15:55:55 2020
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import (pyqtSignal)
 import pickle, os, sys
+import pandas as pd
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -37,14 +38,11 @@ class curvePlot(QtWidgets.QDialog,baseGui):
 
         #button Layout
         buttonLayout = QtWidgets.QHBoxLayout()
-        self.headerCheck = QtWidgets.QCheckBox("Header")
-        self.headerCheck.setToolTip("Copy also header data")        
-        copyButton = QtWidgets.QPushButton("&COPY")
+        exportButton = QtWidgets.QPushButton("&EXPORT")
         plotButton = QtWidgets.QPushButton("&PLOT")
         closeButton = QtWidgets.QPushButton("&CLOSE")
         buttonLayout.addStretch()
-        buttonLayout.addWidget(self.headerCheck)
-        buttonLayout.addWidget(copyButton)
+        buttonLayout.addWidget(exportButton)
         buttonLayout.addWidget(plotButton)
         buttonLayout.addWidget(closeButton)
 
@@ -75,7 +73,7 @@ class curvePlot(QtWidgets.QDialog,baseGui):
         
         plotButton.clicked.connect(self.plotButton_clicked)
         closeButton.clicked.connect(self.reject)
-        copyButton.clicked.connect(self.copyButton_clicked)
+        exportButton.clicked.connect(self.exportButton_clicked)
 
         figure.clear()
         ax = figure.add_subplot(111)
@@ -100,25 +98,26 @@ class curvePlot(QtWidgets.QDialog,baseGui):
         self.curve.drawFitted(ax)
         fig.savefig(fileName)
         
-    def copyButton_clicked(self):
-        line = ""
-        header = ""
-        for name,value in self.soilParams:
-            if name =='a45':
-                value = round(value,6)
-            line += "{}\t".format(value)
-            header+="{}\t".format(name)
-        for value in self.soilModel:
-            line += "{}\t".format(value)        
+    def exportButton_clicked(self):
+        curveData = self.curve.exportCurve()
+        parameters = self.curve.exportParams()
         
-        header+="\t".join(['a','b','c','d'])
-        text = line 
-        if self.headerCheck.isChecked():
-            text = header + os.linesep + line
-        cb = QtWidgets.QApplication.clipboard()
-        cb.clear(mode=cb.Clipboard)
-        cb.setText(text, mode=cb.Clipboard)
-       
+        filetypes = "Excel (*.xlsx)"
+        fileName,_ = QtWidgets.QFileDialog.\
+            getSaveFileName(self,"File to save results", self.outputDir,filetypes) 
+ 
+        if fileName=="":
+            return
+        file,ext = os.path.splitext(fileName)
+   
+        if ext != '.xlsx':
+            fileName = fileName+'.xlsx'
+
+        writer = pd.ExcelWriter(fileName)
+        curveData.to_excel(writer,sheet_name='curve')   
+        parameters.to_excel(writer,sheet_name='parameters')
+        writer.save()
+        self.message("File {} exported".format(os.path.basename(fileName)))
 
 
 class curveFitWidget(QtWidgets.QWidget,baseGui):
@@ -130,7 +129,6 @@ class curveFitWidget(QtWidgets.QWidget,baseGui):
         mainLayout = QtWidgets.QHBoxLayout()
         self._collections = collections
         self.curve = None
-        self.modify = True
         self._soil = None
         
         #SOIL
@@ -202,12 +200,10 @@ class curveFitWidget(QtWidgets.QWidget,baseGui):
 
         self.curve = soilCurve()
         self.curve.fit(self._soil['a45'],T3D,HSD,self._soil['name'])
-        if self.modify:
-            self.curve.modify_curve_parameters(b=-2/200)
         
     def plotCurve(self):
         self.fitCurve()
-        curvePlotDialog = curvePlot(self.curve)
+        curvePlotDialog = curvePlot(self.curve) # dialog class
         curvePlotDialog.show()
         curvePlotDialog.exec_()
    

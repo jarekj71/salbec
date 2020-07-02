@@ -10,8 +10,9 @@ Created on Mon May 18 09:24:22 2020
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QAbstractTableModel
 import os
+import pandas as pd
 
-from albedo import albedo
+from albedo import albedo, batch_albedo_main_times
 from GUI.baseGui import baseGui
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -49,7 +50,8 @@ class timeSliderWidget(QtWidgets.QWidget,baseGui):
     def __init__(self,albedo):
         super().__init__()
         
-        self.results = albedo.calculate_for_time_slider()
+        self.results = albedo.time_slider()
+        self.albedo = albedo
         minSlider = 0
         maxSlider = len(self.results['albedo'])-1
         center = int(maxSlider/2)
@@ -60,10 +62,7 @@ class timeSliderWidget(QtWidgets.QWidget,baseGui):
         self.slider.setMaximum(maxSlider)
         self.slider.setValue(center)
         
-        copyButton = QtWidgets.QPushButton("COPY {} VALUES".format(os.linesep))
-        
         self.slider.valueChanged.connect(self.slider_valueChanged)
-        copyButton.clicked.connect(self.copyButton_clicked)
 
         sunriseUTM = QtWidgets.QLabel(self.results['utc_sunrise_time'].strftime("%H:%M"))
         sunsetUTM = QtWidgets.QLabel(self.results['utc_sunset_time'].strftime("%H:%M"))
@@ -97,7 +96,6 @@ class timeSliderWidget(QtWidgets.QWidget,baseGui):
         mainLayout = QtWidgets.QHBoxLayout()
         mainLayout.addStretch()
         mainLayout.addLayout(gridLayout)
-        mainLayout.addWidget(copyButton)
         mainLayout.addStretch()
         self.setLayout(mainLayout)
         
@@ -110,22 +108,13 @@ class timeSliderWidget(QtWidgets.QWidget,baseGui):
         self.currentUTMLabel.setText(self.currentUTMText)
         self.currentSLTLabel.setText(self.currentSLTText)        
             
-    def copyButton_clicked(self):
-        text = "UTM,SLT,albedo"+os.linesep
-        for utm,slt,albedo in zip(self.results["tUTM"],self.results["tSLT"],self.results["albedo"]):
-            text += "{},{},{:0.5}{}".format(utm.strftime("%H:%M"),slt.strftime("%H:%M"),albedo,os.linesep)
-        cb = QtWidgets.QApplication.clipboard()
-        cb.clear(mode=cb.Clipboard)
-        cb.setText(text, mode=cb.Clipboard)
 #%%
 class errorCurveDialog(QtWidgets.QDialog,baseGui):
-    def __init__(self,albedo,plottitle,errorlist,description):
+    def __init__(self,albedo,plottitle,description):
         super().__init__()
         
         self.setWindowTitle(plottitle)
         self.description = description
-        self.record = None
-        self.errorlist = errorlist
         self.plottitle = plottitle
         self.albedo = albedo
         
@@ -134,11 +123,9 @@ class errorCurveDialog(QtWidgets.QDialog,baseGui):
         
         pdfButton = QtWidgets.QPushButton("PLOT")
         pdfButton.setToolTip("plot diagram")
-        copyButton = QtWidgets.QPushButton("COPY")
-        copyButton.setToolTip("copy parameters to clipboard")
+        exportButton = QtWidgets.QPushButton("EXPORT")
+        exportButton.setToolTip("export curve values to excel")
         closeButton = QtWidgets.QPushButton("CLOSE")
-        self.headerCheck = QtWidgets.QCheckBox("Header")
-        self.headerCheck.setToolTip("Copy also header data")    
 
         sliderWidget = timeSliderWidget(self.albedo)
         sliderLayout = QtWidgets.QHBoxLayout()
@@ -159,8 +146,7 @@ class errorCurveDialog(QtWidgets.QDialog,baseGui):
 
         buttonsLayout = QtWidgets.QHBoxLayout()
         buttonsLayout.addStretch()
-        buttonsLayout.addWidget(self.headerCheck)
-        buttonsLayout.addWidget(copyButton)
+        buttonsLayout.addWidget(exportButton)
         buttonsLayout.addWidget(pdfButton)
         buttonsLayout.addWidget(closeButton)
         
@@ -171,37 +157,33 @@ class errorCurveDialog(QtWidgets.QDialog,baseGui):
         mainLayout.addLayout(descLayout)
         self.setLayout(mainLayout)
         closeButton.clicked.connect(self.accept) 
-        copyButton.clicked.connect(self.copyButton_clicked)
         pdfButton.clicked.connect(self.pdfButton_clicked)
+        exportButton.clicked.connect(self.exportButton_clicked)
         
         figure.clear()
-        self.albedo.plot_time_curve(figure,self.plottitle,self.errorlist)
+        self.albedo.plot_time_curve(figure,self.plottitle)
         canvas.draw()  
-        
     
-    def setRecord(self,index):
-        self.record = self.albedo.get_record(index)
-    
-    def copyButton_clicked(self):
-        if self.record is None:
-            self.warning("No record selected","Nothing copied")
+    def exportButton_clicked(self):
+        times = self.albedo.times_DataFrame()
+        parameters = self.albedo.get_record(header=True)
+       
+        filetypes = "Excel (*.xlsx)"
+        fileName,_ = QtWidgets.QFileDialog.\
+            getSaveFileName(self,"File to save results", self.outputDir,filetypes) 
+ 
+        if fileName=="":
             return
-        header = self.record.index.values.tolist()
-        header = [str(b) for b in header]
-        line = self.record.values.tolist()
-        line = [str(b) for b in line]
-        header = "\t".join(header)
-        line = "\t".join(line)
-        header = header+"latitude \t longitude"
-        line = line + "\t".join([str(self.albedo.location.latitude),str(self.albedo.location.longitude)])
-        
-        text = line
-        if self.headerCheck.isChecked():
-            text = header + os.linesep + line
-        cb = QtWidgets.QApplication.clipboard()
-        cb.clear(mode=cb.Clipboard)
-        cb.setText(text, mode=cb.Clipboard)
-        return
+        file,ext = os.path.splitext(fileName)
+   
+        if ext != '.xlsx':
+            fileName = fileName+'.xlsx'
+
+        writer = pd.ExcelWriter(fileName)
+        times.to_excel(writer,sheet_name='curve')   
+        parameters.to_excel(writer,sheet_name='parameters')
+        writer.save()
+        self.message("File {} exported".format(os.path.basename(fileName)))
 
     def pdfButton_clicked(self):
         if self.albedo is None:
@@ -216,7 +198,7 @@ class errorCurveDialog(QtWidgets.QDialog,baseGui):
         
         if ext not in ['.pdf','.png','.svg']:
             fileName = fileName+"."+fileType[:3]
-        self.albedo.plot_time_curve(figure=fileName,plottitle=self.plottitle,errorlist=self.errorlist)
+        self.albedo.plot_time_curve(figure=fileName,plottitle=self.plottitle)
         return
         
 #%%
@@ -252,34 +234,30 @@ class resultsWidget(QtWidgets.QWidget,baseGui):
         self.location = location
         soil_model = model
         start_day,end_day,interval = days
-        self.errors = errors
         self.soilParams = soilParams+list(zip(["lat","lon"],self.location))
         
-        self.a = albedo()
-        self.a.load_parameters(soil_model,self.location)
-        self.a.batch_mean_albedo_time(start_day=start_day,end_day=end_day,
-                                                  interval=interval,errors=self.errors)
-        
-        self.data = self.a.get_data()
+        self.albedo = albedo()
+        self.albedo.load_parameters(soil_model,self.location,errors)
+        self.data = batch_albedo_main_times(self.albedo,start_day=start_day,end_day=end_day,
+                                                  interval=interval)
+       
         dataModel  = pandasModel(self.data)
         self.resultsTable.setModel(dataModel)
         if self.data is not None:
             self.saveResultsButton.setEnabled(True)
-            
+       
      
     def viewClicked(self, index):
-        if self.a is None:
+        if self.albedo is None:
             return
         row=index.row()
-        day_of_year = self.data.iloc[row,0].item()
-        self.a.store_current_date()
-        self.a.set_date_by_day(day_of_year)
-        curvePlot = errorCurveDialog(self.a,None,self.errors,self.soilParams)
-        curvePlot.setRecord(row)
+        dayOfYear = self.data.iloc[row,0].item()
+        self.albedo.set_date_by_day(dayOfYear)
+        #print(row)
+        #record = self.data.iloc[row].copy()
+        curvePlot = errorCurveDialog(self.albedo,None,self.soilParams)
         curvePlot.show()
         curvePlot.exec_()
-        self.a.restore_current_date()
-  
 
     def exportExcel_clicked(self):
         if self.data is None:
