@@ -250,7 +250,7 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         if warning:
             self.warning(*warning)
             return
-        self._clearAll()
+        self.clearAll()
     
     def newButton_clicked(self):
         newCollectionName = self.newCollection.text()

@@ -97,6 +97,7 @@ class curvePlot(QtWidgets.QDialog,baseGui):
         fig,ax = matplotlib.pyplot.subplots(1,1,figsize=(8,4),dpi=150)
         self.curve.drawFitted(ax)
         fig.savefig(fileName)
+        self.message("File {} plotted".format(os.path.basename(fileName)))
         
     def exportButton_clicked(self):
         curveData = self.curve.exportCurve()

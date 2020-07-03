@@ -198,7 +198,8 @@ class errorCurveDialog(QtWidgets.QDialog,baseGui):
         
         if ext not in ['.pdf','.png','.svg']:
             fileName = fileName+"."+fileType[:3]
-        self.albedo.plot_time_curve(figure=fileName,plottitle=self.plottitle)
+        self.albedo.plot_time_curve(fileName,self.plottitle)
+        self.message("File {} plotted".format(os.path.basename(fileName)))
         return
         
 #%%
