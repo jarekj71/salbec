@@ -384,7 +384,7 @@ class soilCurve():
         
     def __recalc(self):
         self.a45 = 0.33 - 0.11 * self.T3D + self.GL
-        sA = 6.26 * 7.41e-8 + 0.0043*pow(self.HSD,-1.418)
+        sA = 6.26e-7 + 0.0043*pow(self.HSD,-1.418)
         Ts = np.arange(0,76)
         self.__aTs = self.a45*(1+sA*(Ts-45))
         

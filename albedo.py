@@ -41,10 +41,13 @@ class albedo:
         self._slt_time = {}
         self._agregated_values = None
                 
-        self._error_colors = ['#AF1E1E','#FA861E','#F2A62C','#F0F22C']
+        self._error_starting_colors = [(240,240,48),(175,30,30)]
+        self._error_colors = []
         self._mean_color_V = '#00A203'
         self._mean_color_H = '#C1CACF'
         self._curve_color = '#CC6600'
+    
+
     
     def load_parameters(self,soil_curve,location,errors=[]):
         self._soil = soil_curve
@@ -53,7 +56,16 @@ class albedo:
         if len(errors) > 0:
             errors = tuple(i for i in errors if 0 <= i <=1)
         self._errors = errors
-
+        
+        c = self._error_starting_colors
+        num_of_errors = len(self._errors)
+        d = num_of_errors-1
+        for i in range(num_of_errors):
+            color = ((c[0][0]/255)*(i/d)+(c[1][0]/255)*((d-i)/d),
+                     (c[0][1]/255)*(i/d)+(c[1][1]/255)*((d-i)/d),
+                     (c[0][2]/255)*(i/d)+(c[1][2]/255)*((d-i)/d))
+            self._error_colors.append(color)    
+        
         colnames = []
         colnames += ['day','date','mean_albedo','max_error']
         colnames += ["UTM_sunrise",'UTM_am_mat','UTM_noon','UTM_pm_mat','UTM_sunset']# mat - mean albedo time
@@ -305,6 +317,13 @@ class albedo:
         w_values = w[3][1:-1]
         n = len(w_times)//2
         central = n//2
+        
+        delta = self.get_mean_albedo_time_delta(mean_albedo_value)
+        slt_am_time = self._slt_time['noon'] - delta
+        slt_pm_time = self._slt_time['noon'] + delta
+        
+        slt_am_max = slt_am_time + (slt_am_time - self._slt_time['sunrise'])
+        slt_pm_min = slt_pm_time - (self._slt_time['sunset'] - slt_pm_time)
 
         error_colors = self._error_colors
         mean_color_V = self._mean_color_V
@@ -331,7 +350,8 @@ class albedo:
         
         ax0.axhline(y = mean_albedo_value,color=mean_color_H,linestyle="--",alpha=0.5,label="mean albedo value")
         ax0.set_ylim(min(w_values)*0.9,max(w_values)*2)
-        ax0.plot(times[0:span],y[0:span],color=curve_color)
+        ax0.set_xlim(self._slt_time['sunrise'].time(),slt_am_max.time())
+        ax0.plot(times,y,color=curve_color)
         ax0.set_xlabel("Solar Local Time")
         ax0.set_ylabel("Albedo")
         ax0.set_title("Optimal a.m. time with errors")
@@ -352,7 +372,8 @@ class albedo:
             ax1.axvline(x = h,color=erc,linestyle="--",linewidth=1)
         
         ax1.set_ylim(min(w_values)*0.9,max(w_values)*2)
-        ax1.plot(times[-span:],y[-span:],color=curve_color)
+        ax1.set_xlim(slt_pm_min.time(),self._slt_time['sunset'].time())
+        ax1.plot(times,y,color=curve_color)
         ax1.set_xlabel("Solar Local Time")
         ax1.set_title("Optimal p.m. time with errors")
         ax1.get_yaxis().set_visible(False)
@@ -368,6 +389,7 @@ class albedo:
         axn.axvline(x = w_times[n+central],color=mean_color_V,linestyle="--",linewidth=2)
         axn.set_title("Full day albedo change")
         axn.set_xlabel("Solar Local Time")
+        axn.set_ylabel("Albedo")
 
         for ax in fig.axes:
             ax.tick_params(axis='x', labelrotation=45, labelsize=8)

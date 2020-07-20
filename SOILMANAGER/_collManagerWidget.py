@@ -174,7 +174,7 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         database = self.soilCollections.getSoilsDatabase()
 
         batchExport(fileName,selection,database,resolution)
-        self.message("{} Exported".format(fileName))
+        self.message("{} Exported".format(os.path.basename(fileName)))
     
     def importImport_clicked(self):
         if self.import_file_name is None:
@@ -186,6 +186,7 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         self.soilCollections.reloadSoilDataModel()
         self._select_in_list(selection)
         self.import_file_name = None
+        self.message("{} Imported".format(os.path.basename(self.import_file_name)))
 
     def selectCollection(self,index):
         collectionModel = self.soilCollections.getModel()
@@ -228,7 +229,7 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         self.collectionsList.selectionModel().clear()
         self.exportText.clear()
         self.importText.clear()
-
+  
     def useButton_clicked(self):
         selection = self._getSelection()
         self.soilCollections.setActiveSelection(*selection)

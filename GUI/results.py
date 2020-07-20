@@ -274,3 +274,4 @@ class resultsWidget(QtWidgets.QWidget,baseGui):
         if ext != '.xlsx':
             fileName = fileName+'.xlsx'
         self.data.to_excel(fileName)
+        self.message("{} Exported".format(os.path.basename(fileName)))

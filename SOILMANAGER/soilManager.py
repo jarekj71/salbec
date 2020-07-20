@@ -54,7 +54,6 @@ class soilsDialog(QtWidgets.QDialog,baseGui):
         closeButton.clicked.connect(self.accept)
 
         
-        
         mainLayout = QtWidgets.QHBoxLayout()
         mainLayout.addWidget(tabs)
         mainLayout.addLayout(listLayout)

@@ -84,6 +84,6 @@ class soilsCollections():
             return "collection {} does not exist",None 
 
     def setActiveSelection(self,*activeSelection):
-        if activeSelection == []:
+        if list(activeSelection) == []:
             activeSelection = self.getSoilsNames()
         self.selectionModel.setStringList(activeSelection)  
