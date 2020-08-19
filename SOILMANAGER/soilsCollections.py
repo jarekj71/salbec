@@ -8,9 +8,8 @@ Created on Fri Jun 19 10:24:41 2020
 import os, pickle
 from PyQt5 import QtCore
 from PyQt5.QtCore import (pyqtSignal)
-from soil import soilDatabase
+from soilalbedo import soilDatabase
 
-#%%
 class soilsCollections():
     def __init__(self):
         self._soilDatabase = soilDatabase()

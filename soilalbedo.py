@@ -5,6 +5,7 @@ Created on Wed Jan 15 07:44:48 2020
 
 @author: jarekj
 """
+from typing import Sequence, Union
 from scipy.interpolate import interp1d
 from scipy.misc import derivative
 from scipy.optimize import least_squares
@@ -13,170 +14,18 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 import copy, os, pickle
-#from io import StringIO będzie niezbędne przy rozbudowie
+from soildatabase import soilDatabase
 
-#%%
-
-class soilDatabase():
-    def __init__(self,databaseDir=None,databaseFile=None):
-        self._databaseDir = databaseDir or ".SOILS"
-        self._soilsDir = os.path.join(self._databaseDir,"soils") 
-        self._databaseFile = databaseFile or os.path.join(self._databaseDir,"soilDatabase.p")
-        self._rebuildDatabase()
-
-    def createSoilDatabase(self):
-        if not os.path.isdir(self._databaseDir):
-            print("create database")
-            os.mkdir(self._databaseDir)
-        if not os.path.isdir(self._soilsDir):
-            os.mkdir(self._soilsDir)
-        if not os.path.isfile(self._databaseFile):
-            print("create database file")
-            pickle.dump({},open(self._databaseFile,"wb+")) # dump empty dict
-        print("database exists")
-            
-    def _soilName(self,soilName):
-        soilName = ''.join(soilName.split())
-        name,ext = os.path.splitext(soilName)
-        if ext == '.sl': # remove extension if file name
-            return name
-        return soilName
-    
-    def _getDatabase(self):
-        try:
-            database = pickle.load(open(self._databaseFile,"rb"))
-        except FileNotFoundError:
-            self._rebuildDatabase()
-            database = pickle.load(open(self._databaseFile,"rb"))
-        
-        fileList = os.listdir(os.path.join(self._soilsDir))
-        if list(database.keys()) == [] and fileList == []:
-            return {}
-        try:
-            soilnames_sorted = list(database.keys())
-            soilnames_sorted.sort()
-        except TypeError:
-            self._rebuildDatabase()
-            soilnames_sorted = list(database.keys())
-            soilnames_sorted.sort()
-        fileList = [self._soilName(soilName) for soilName in fileList]
-        fileList.sort()
-        if soilnames_sorted != fileList:
-            self._rebuildDatabase()
-        return database
-        
-    def listDatabase(self):
-        database = self._getDatabase()
-        for key,value in database.items():
-            print(key,os.path.basename(value))
-        
-    @property
-    def soilNames(self):
-        database = self._getDatabase()
-        names = list(database.keys())
-        names.sort()
-        return names
-    
-    def getPath(self,soilName):
-        database = self._getDatabase()
-        try:
-            return database[soilName]
-        except KeyError:
-            return None
-
-    @property
-    def database(self):
-        return self._getDatabase()
-        
-    def rebuildDatabase(self):
-        self._rebuildDatabase()
-
-    def _rebuildDatabase(self):
-        fileList = os.listdir(self._soilsDir)
-        if fileList == []:
-            pickle.dump({},open(self._databaseFile,"wb+")) # dump empty dict
-            return
-        database = {}
-        fileList.sort()
-        for file in fileList:
-            soil = pickle.load(open(os.path.join(self._soilsDir,file),"rb"))
-            name = self._soilName(soil['name'])
-            database[name] = os.path.join(self._soilsDir,file)
-        pickle.dump(database,open(self._databaseFile,"wb+"))
-        self._database = database
-
-        
-    def addToDatabase(self,soil):
-        database = pickle.load(open(self._databaseFile,"rb"))
-        soilName = self._soilName(soil['name'])
-        if soilName in database.keys():
-            return "Cannot add soil", "Soil with name {} exists in database. Use different name".format(soil['name'])
-        
-        soilFileName = soilName+'.sl'
-        soilFileName = os.path.join(self._soilsDir,soilFileName)
-        pickle.dump(soil,open(soilFileName,"wb+"))
-        database[soilName] = soilFileName
-        pickle.dump(database,open(self._databaseFile,"wb+"))
-        return None
-
-    
-    def removeFromDatabase(self,soilName): 
-        database = self._getDatabase()
-        if soilName not in list(database.keys()):
-            return "Cannot find soil: {}".format(soilName),"Check soil name"
-        database.pop(soilName)
-        try:
-            os.remove(os.path.join(self._soilsDir,soilName+'.sl'))
-        except NameError: #sould never happen
-            return "File error",None
-        pickle.dump(database,open(self._databaseFile,"wb+"))
-        return None
+def read_csv(fileName: str) -> pd.DataFrame:
+    """Read csv (comma sepparated) and csv2 (semicolon separated)
 
 
-    def replaceSoil(self,currentSoilName,soil):
-        #remove and add new soil must be craated
-        database = self._getDatabase()
-        if currentSoilName not in list(database.keys()):
-            return "Cannot find soil: {}".format(currentSoilName),"Check soil name"
-        soilName = self._soilName(soil['name'])
-        
-        if soilName == currentSoilName: #in modify file only
-            soilFileName = currentSoilName+'.sl'
-            soilFileName = os.path.join(self._soilsDir,soilFileName)
-            pickle.dump(soil,open(soilFileName,"wb+"))
-            return None
-        
-        warning = self.addToDatabase(soil)
-        if warning:
-            return warning
-        warning = self.removeFromDatabase(currentSoilName)
-        if warning:
-            self.removeFromDatabase(soilName)
-            return warning
-        return None
-   
-    
-    def clearDatabase(self):
-        fileList = os.listdir(self._soilsDir)
-        for filename in fileList:
-            file_path = os.path.join(self._soilsDir, filename)
-            try:
-                if os.path.isfile(file_path):
-                    os.unlink(file_path)
-            except Exception as e:
-                print('Failed to delete %s. Reason: %s' % (file_path, e))
-        pickle.dump({},open(self._databaseFile,"wb+")) # dump empty dict
-        
-    
-    def getSoil(self,soilName):
-        soilPath = self.getPath(soilName)
-        if soilPath is None:
-            return None
-        soilData = pickle.load(open(soilPath,"rb"))
-        return soilData
+    Args:
+        fileName (str): Name of csv file
 
-#%%
-def read_csv(fileName):
+    Returns:
+        pd.DataFrame: Data formated as pandas data frame
+    """
     sep = ","
     dec = "."
     with open(fileName) as cc:
@@ -199,7 +48,12 @@ class soil():
         self.soilName = None
         self.coordinates = None
 
-    def importFromFile(self,fileName):
+    def importFromFile(self,fileName: str) -> None:
+        """import either csv and xls/xlsx files
+
+        Args:
+            fileName (str): csv/csv2 or xls/xlsx file
+        """
         
         if not os.path.isfile(fileName):
             return "Wrong file name or file path",None
@@ -234,7 +88,14 @@ class soil():
         
         self.importSeries(wavelengths,reflectance)
     
-    def importSeries(self,wavelengths,reflectance):
+    def importSeries(self,wavelengths: np.ndarray,reflectance: np.ndarray):
+        """import data already formatted as numpy nd array
+
+        Args:
+            wavelengths (np.ndarray): wavelengths 1D ndarray values between 350 and 2500
+            reflectance (np.ndarray): reflectance value values between 0 and 1
+
+        """
         self._wavelengths = wavelengths
         self._reflectance = reflectance
         self._f = interp1d(self._wavelengths,self._reflectance,kind="quadratic")
@@ -262,8 +123,17 @@ class soil():
     def interp(self):
         return self._f
     
-    def exportSoil(self,name,lat=None,lon=None):
-        #domyślna nazwa tworzona na zewnątrz
+    def exportSoil(self,name:str,lat:float=None,lon:float=None) -> dict:
+        """export soil dict formatted to be used with soil database
+
+        Args:
+            name (str): name of soil/location
+            lat (float, optional): latitude  of soil sample. Defaults to None.
+            lon (float, optional): longitude of soil sample. Defaults to None.
+
+        Returns:
+            dict: structure (dict containg soil description)
+        """
         soil = {}
         soil['name'] = name
         soil['coords'] = (lat,lon)
@@ -273,7 +143,15 @@ class soil():
         soil['a45'] = self.a45
         return soil
     
-    def importFromDatabase(self,soil):
+    def importFromDatabase(self,soil:dict) -> tuple:
+        """import soil dict formatted from the database
+
+        Args:
+            soil (dict): soil dictionary
+
+        Returns:
+            tuple: name and soil sample coordinates
+        """
         lat,lon = soil['coords']
         name = soil['name']
         self._reflectance = soil['reflectance']
@@ -283,7 +161,14 @@ class soil():
         return name,lat,lon
     
 
-    def drawSpectrum(self,ax,lines=True,title=False):
+    def drawSpectrum(self,ax: plt.Axes,lines:bool=True,title:str=None) -> None:
+        """plot spectrum on given Axes. Axes must be created before method call
+
+        Args:
+            ax (plt.Axes): Axes to plot spectrum
+            lines (bool, optional): Plot lines of important wavelengths. Defaults to True.
+            title (str, optional): Custom title, None to keep default. Defaults to None.
+        """
         ax.plot(self._wavelengths,self._reflectance)
         ax.set_ylabel("Reflectance")
         ax.set_xlabel("Wavelength (nm)")
@@ -298,13 +183,15 @@ class soil():
         if title:
             ax.set_title(title)
 
-#%%
-def _exportSoilToDf(soilData,resolution=0):
+def _exportSoilToDf(soilData:dict,resolution:float=0) -> tuple:
     columns = [soilData['name']]
     coords_df = pd.DataFrame(soilData['coords'],index=["lat","lon"],columns=columns)
     #
     reflectance = soilData['reflectance']
     wavelengths = soilData['wavelengths']
+    if resolution < 0:
+        print("resolution cannot be negative")
+        return None
     if resolution:
         f = interp1d(wavelengths,reflectance,kind="quadratic")
         wavelengths = np.arange(wavelengths.min(),wavelengths.max(),step=resolution)
@@ -312,11 +199,17 @@ def _exportSoilToDf(soilData,resolution=0):
     
     spectrum_df = pd.DataFrame(reflectance,index=wavelengths)
     return coords_df,spectrum_df
-    
 
-#%%
+def exportSoilToText(soilData:dict,resolution:float=0)->str:
+    """Export soil database as comma sepatated values
 
-def exportSoilToText(soilData,resolution=0):
+    Args:
+        soilData (dict): Soil data formatted to be used with soil Database
+        resolution (float, optional): Resolution of spectrum 0 to keep current resolution. Defaults to 0.
+
+    Returns:
+        str: text formatted as comma separated values
+    """
     dataframes = _exportSoilToDf(soilData,resolution)
     df1 = dataframes[0]
     df2 = dataframes[1]
@@ -332,8 +225,15 @@ def exportSoilToText(soilData,resolution=0):
     return text
 
 
-#%%
-def batchExport(filepath,selection,database=None,resolution=0):
+def batchExport(filepath:str,selection:Sequence[str],database:soilDatabase=None,resolution:float=0):
+    """Export all soils in selection list as excel file. Both batch... functions are intened to be used in GUI
+
+    Args:
+        filepath (str): path to new excel file where soils will be saved
+        selection (Sequence[str]): list of soils to save
+        database (soilDatabase, optional): Use only in text mode. Defaults to None.
+        resolution (float, optional): resolution of exported spectra. Defaults to 0 keep orginal resolution.
+    """
     sldb = soilDatabase() if database is None else database
     writer = pd.ExcelWriter(filepath)
     index = True
@@ -347,8 +247,20 @@ def batchExport(filepath,selection,database=None,resolution=0):
         dataframes[1].to_excel(writer,sheet_name='exported',startrow=3, startcol=col, index=index, header=False)
     writer.save()        
 
-#%%
-def batchImport(fileName,database=None,listonly=False,selection=None):
+
+def batchImport(fileName:str,database:soilDatabase=None,listonly:bool=False,selection:Sequence[str]=None) -> None:
+    """Import all soils in selection list from excel file. Both batch... functions are intened to be used in GUI
+
+    Args:
+        fileName (str): path to existing w excel file where soils are stored
+        database (soilDatabase, optional): Use existing database or create new. Defaults to None (create).
+        listonly (bool, optional):  Only return soil names and exit. Defaults to False.
+        selection (Sequence, optional): List of soils to be imported. Must be a subset od soils in excel file. Defaults to None.
+
+    Returns:
+        None or List(str): List with all soils in given Excel file
+    """
+
     sldb = soilDatabase() if database is None else database
     try:
         coordinates = pd.read_excel(fileName,nrows=2,index_col="symbol")
@@ -371,7 +283,7 @@ def batchImport(fileName,database=None,listonly=False,selection=None):
         sl = s.exportSoil(name,*coords)
         sldb.addToDatabase(sl)
     return None
-#%%
+
 class soilCurve():
     def __init__(self):
         self.__x_test=np.concatenate((np.arange(0,89.),np.linspace(89,90,9)))
@@ -412,9 +324,18 @@ class soilCurve():
         self.__y_test = None
     
    
-    def fit(self,GL,T3D,HSD,soilName=''):
+    def fit(self,GL:float,T3D:float,HSD:float,soilName:str='') -> None:
+        """fit soil albedo model to the generated date
+
+        Args:
+            GL (float): soil spectral part of A45 parameter
+            T3D (float): terrain 3D ratio (ratio between real surface and flat surface)
+            HSD (float): roughness in mm
+            soilName (str, optional): Name for soil. Defaults to ''.
+        """
+
         self.GL = GL
-        self.T3D = T3D # usunąć selfy
+        self.T3D = T3D 
         self.HSD = HSD
         self.name = soilName
         
@@ -428,7 +349,7 @@ class soilCurve():
         y3 = np.array([1])
         y_train = np.concatenate((y2,y3))
 
-        x0 = np.array([-2.,-0.01,0.01,-1.0e-7]) # wartości początkowe mogą być trudne do ustawienia
+        x0 = np.array([-2.,-0.01,0.01,-1.0e-7]) # starting values, possible source of overfitting
         self.__res = least_squares(self.__fit_aTS,x0,args=(x_train,y_train))
         self.__reset_abcd = copy.copy(self.__res.x)
         self.__abcd = copy.copy(self.__res.x)
@@ -439,11 +360,23 @@ class soilCurve():
         self._soil_params = list(zip(names,params))
         self.__y_test = self.__aTS(self.__abcd,self.__x_test)
             
-    def get_soil_params(self):
+    def get_soil_params(self) -> dict:
+        """getter, returns soil paramteres
+
+        Returns:
+            dict: soil parameters
+        """
+
         return self._soil_params
     
 
-    def drawFitted(self,ax=None,current=True):
+    def drawFitted(self,ax:plt.Axes=None) -> None:
+        """draw fitted curve on selected axis.
+
+        Args:
+            ax (plt.Axes, optional): Axis where curwe is to be drown. If None use current graphic device (gca). Defaults to None.
+        """
+ 
         ax = ax or plt.gca()
         p_x = np.array([0,10,20,45,65,75])
         p_y = self.__aTs[p_x]
@@ -464,11 +397,21 @@ class soilCurve():
         ax.set_xlabel("Solar Zenith Angle")
         ax.set_ylabel("Albedo")
 
-    def exportCurve(self):
+    def exportCurve(self) -> pd.DataFrame:
+        """Exports curve in a form of two column pandas data frame to draw curve externally
+
+        Returns:
+            pd.DataFrame: Date frame with curve data
+        """
         df = pd.DataFrame(self.__y_test,index=self.__x_test,columns=["albedo"])
         return df        
 
-    def exportParams(self):
+    def exportParams(self) -> pd.Series:
+        """Exports curve parameters as pandas serie
+
+        Returns:
+            pd.Series: curve parameters
+        """
         cindex = self.get_curve_params().keys()
         cvalues = self.get_curve_params().values()
         sindex,svalues = list(zip(*self.get_soil_params()))
@@ -479,28 +422,23 @@ class soilCurve():
         
         
     def modify_curve_parameters(self,**kwargs):
+        """Allow to manually modify curve parameters (a,b,c,d)
         """
-        
 
-        Parameters
-        ----------
-        **kwargs : TYPE
-            modyfikatory (0-1) dla poszczególnych parametrów 0 aby zresetować.
-
-        Returns
-        -------
-        None.
-
-        """
         for key in kwargs.keys():
             index = self.__indexes[key]
             self.__abcd[index] = self.__reset_abcd[index]*(1+kwargs[key])
 
      
-    def get_curve_model(self):
+    def get_curve_model(self) -> list:
+        """Returns curve model as list [a,b,c,d]
+        """
         return self.__abcd
     
-    def get_curve_params(self):
+    def get_curve_params(self) -> dict:
+        """Returns curve model as dict [a,b,c,d]
+        """
+
         curve_params = {}
         for key,index in self.__indexes.items():
             curve_params[key] = self.__abcd[index]

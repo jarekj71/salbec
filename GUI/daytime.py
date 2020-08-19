@@ -6,10 +6,10 @@ Created on Sun May 17 10:45:45 2020
 @author: jarek
 """
 
-#%%
+
 from PyQt5 import QtWidgets, QtCore
 from GUI.baseGui import baseGui
-#%%
+
 class selectDayWidget(QtWidgets.QWidget,baseGui):
     def __init__(self,label=""):
         super().__init__()

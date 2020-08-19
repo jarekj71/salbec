@@ -5,7 +5,7 @@ Created on Fri Jan 10 15:55:55 2020
 
 @author: jarekj
 """
-#%%
+
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import (pyqtSignal)
 import pickle, os, sys
@@ -16,10 +16,9 @@ from matplotlib.figure import Figure
 import matplotlib
 matplotlib.use('Qt5Agg')
 
-from soil import soilCurve, soilDatabase
+from soilalbedo import soilCurve
 from GUI.baseGui import baseGui
 
-#%%
 class curvePlot(QtWidgets.QDialog,baseGui):
     def __init__(self,curve=None):
         super().__init__()

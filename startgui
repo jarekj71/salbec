@@ -21,7 +21,6 @@ from SOILMANAGER.soilsCollections import soilsCollections
 
 app=QtWidgets.QApplication(sys.argv)
 
-#%%
 
 class mainWindow(QtWidgets.QMainWindow):
     def __init__(self):

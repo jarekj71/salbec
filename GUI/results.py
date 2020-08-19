@@ -6,21 +6,18 @@ Created on Mon May 18 09:24:22 2020
 @author: jarek
 """
 
-#%%
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QAbstractTableModel
 import os
 import pandas as pd
 
-from albedo import albedo, batch_albedo_main_times
+from diurnalalbedo import albedo, batch_albedo_main_times
 from GUI.baseGui import baseGui
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib
 matplotlib.use('Qt5Agg')
-
-#%%
 
 class pandasModel(QAbstractTableModel):
     def __init__(self, pData, parent=None):
@@ -45,7 +42,7 @@ class pandasModel(QAbstractTableModel):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return self._data.columns[col]
         return None 
-#%%
+
 class timeSliderWidget(QtWidgets.QWidget,baseGui):
     def __init__(self,albedo):
         super().__init__()
@@ -107,8 +104,7 @@ class timeSliderWidget(QtWidgets.QWidget,baseGui):
         self.currentAlbedoLabel.setText(self.currentAlbedoText)
         self.currentUTMLabel.setText(self.currentUTMText)
         self.currentSLTLabel.setText(self.currentSLTText)        
-            
-#%%
+
 class errorCurveDialog(QtWidgets.QDialog,baseGui):
     def __init__(self,albedo,plottitle,description):
         super().__init__()
@@ -201,8 +197,6 @@ class errorCurveDialog(QtWidgets.QDialog,baseGui):
         self.albedo.plot_time_curve(fileName,self.plottitle)
         self.message("File {} plotted".format(os.path.basename(fileName)))
         return
-        
-#%%
 
 class resultsWidget(QtWidgets.QWidget,baseGui):
     def __init__(self):

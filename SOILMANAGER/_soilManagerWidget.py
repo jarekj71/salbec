@@ -11,7 +11,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib
 matplotlib.use('Qt5Agg')
-from soil import soil, exportSoilToText
+from soilalbedo import soil, exportSoilToText
 from GUI.baseGui import baseGui
 
 class _soilsManager(QtWidgets.QWidget,baseGui):
