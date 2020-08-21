@@ -1,2 +1,2 @@
-# albedo
-Python software to calculate albedo
+# SALBEC
+Python Soil ALBEdo Calculator
