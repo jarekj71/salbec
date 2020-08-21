@@ -8,13 +8,29 @@ Created on Wed Jan 15 07:44:48 2020
 import copy, os, pickle
 
 class soilDatabase():
-    def __init__(self,databaseDir=None,databaseFile=None):
+    """Class intended to work with file database. This database stores soils in following format:
+     - 
+     -
+     -
+     -
+     
+    """
+    def __init__(self,databaseDir:str=None,databaseFile:str=None):
+        """Join with existing databse. Defaults parameters are intended to work with GUI. Data may not to exist.
+            If database does not exists it creates a new empty one.
+
+        Args:
+            databaseDir (str, optional): Path to databsase directory. May not exist Defaults to None.
+            databaseFile (str, optional): Path to databsase file. May not exist. Defaults to None.
+        """
         self._databaseDir = databaseDir or ".SOILS"
         self._soilsDir = os.path.join(self._databaseDir,"soils") 
         self._databaseFile = databaseFile or os.path.join(self._databaseDir,"soilDatabase.p")
         self._rebuildDatabase()
 
-    def createSoilDatabase(self):
+    def createSoilDatabase(self) -> None:
+        """Creates new empty soil database
+        """
         if not os.path.isdir(self._databaseDir):
             print("create database")
             os.mkdir(self._databaseDir)
@@ -55,7 +71,9 @@ class soilDatabase():
             self._rebuildDatabase()
         return database
         
-    def listDatabase(self):
+    def listDatabase(self)-> None:
+        """Prints list od soils in the database
+        """
         database = self._getDatabase()
         for key,value in database.items():
             print(key,os.path.basename(value))
@@ -67,7 +85,15 @@ class soilDatabase():
         names.sort()
         return names
     
-    def getPath(self,soilName):
+    def getPath(self,soilName:str) -> str:
+        """[summary]
+
+        Args:
+            soilName (str): Name of soil in the database. Use .listDatabase() to see it all
+
+        Returns:
+            str or None: string with path to database entity or None if such entity does not exist
+        """
         database = self._getDatabase()
         try:
             return database[soilName]
@@ -78,7 +104,9 @@ class soilDatabase():
     def database(self):
         return self._getDatabase()
         
-    def rebuildDatabase(self):
+    def rebuildDatabase(self) -> None:
+        """Check internal consistency and rebuilds database id necessary
+        """
         self._rebuildDatabase()
 
     def _rebuildDatabase(self):
@@ -96,7 +124,15 @@ class soilDatabase():
         self._database = database
 
         
-    def addToDatabase(self,soil):
+    def addToDatabase(self,soil:dict) -> None:
+        """Adds soil dict to the database. See class description for details. 
+
+        Args:
+            soil (dict): Soil dict
+
+        Returns:
+            None or Error string: If returns string it is an Error string passed to GUI. None means success.
+        """
         database = pickle.load(open(self._databaseFile,"rb"))
         soilName = self._soilName(soil['name'])
         if soilName in database.keys():
@@ -110,7 +146,15 @@ class soilDatabase():
         return None
 
     
-    def removeFromDatabase(self,soilName): 
+    def removeFromDatabase(self,soilName:str) -> None:
+        """Removes soil from the database with given name
+
+        Args:
+            soilName (str): Name of soil to be removed
+
+        Returns:
+            None or Error string: If returns string it is an Error string passed to GUI. None means success.
+        """
         database = self._getDatabase()
         if soilName not in list(database.keys()):
             return "Cannot find soil: {}".format(soilName),"Check soil name"
@@ -123,8 +167,16 @@ class soilDatabase():
         return None
 
 
-    def replaceSoil(self,currentSoilName,soil):
-        #remove and add new soil must be craated
+    def replaceSoil(self,currentSoilName:str,soil:dict) ->None:
+        """[summary]
+
+        Args:
+            currentSoilName (str): soil name to be replaced
+            soil (dict): soil dict (see class description) to replace existing soils
+
+        Returns:
+             None or Error string: If returns string it is an Error string passed to GUI. None means success.
+        """
         database = self._getDatabase()
         if currentSoilName not in list(database.keys()):
             return "Cannot find soil: {}".format(currentSoilName),"Check soil name"
@@ -136,17 +188,22 @@ class soilDatabase():
             pickle.dump(soil,open(soilFileName,"wb+"))
             return None
         
-        warning = self.addToDatabase(soil)
-        if warning:
-            return warning
-        warning = self.removeFromDatabase(currentSoilName)
-        if warning:
+        error = self.addToDatabase(soil)
+        if error:
+            return error
+        error = self.removeFromDatabase(currentSoilName)
+        if error:
             self.removeFromDatabase(soilName)
-            return warning
+            return error
         return None
    
     
-    def clearDatabase(self):
+    def clearDatabase(self) -> None:
+        """Clear entire databse
+
+        Returns:
+             None or Error string: If returns string it is an Error string passed to GUI. None means success.
+        """
         fileList = os.listdir(self._soilsDir)
         for filename in fileList:
             file_path = os.path.join(self._soilsDir, filename)
@@ -156,9 +213,18 @@ class soilDatabase():
             except Exception as e:
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
         pickle.dump({},open(self._databaseFile,"wb+")) # dump empty dict
+        return None
         
     
-    def getSoil(self,soilName):
+    def getSoil(self,soilName:str) -> dict:
+        """[summary]
+
+        Args:
+            soilName (str): Soil name to get from the database
+
+        Returns:
+            dict: Soil dict, see class description for details.
+        """
         soilPath = self.getPath(soilName)
         if soilPath is None:
             return None

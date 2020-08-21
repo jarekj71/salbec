@@ -7,6 +7,7 @@ Created on Thu Jan 16 12:44:27 2020
 
 """
 import datetime
+from typing import Sequence, Union
 import numpy as np
 import pandas as pd
 from astral import sun 
@@ -18,15 +19,31 @@ import matplotlib.ticker as ticker
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 
-def time_since_midnight(t):
+def time_since_midnight(t:datetime.time) -> datetime.timedelta:
+    """recalculates current time to timedelta since midnight. 
+        It is workaround of bizzare behaviour time and datetime in python
+
+    Args:
+        t (datetime.time): current local time
+
+    Returns:
+        datetime.timedelta: timedelta from midnight.
+    """
     date = datetime. date(1, 1, 1)
-    d1 = datetime. datetime. combine(date, t.min)
-    d2 = datetime. datetime. combine(date, t)
+    d1 = datetime.datetime.combine(date, t.min)
+    d2 = datetime.datetime.combine(date, t)
     return d2 - d1
 
 
 class albedo:
-    def __init__(self,step=1,year=None):
+    def __init__(self,step:int=1,year:int=None):
+        """[summary]
+
+        Args:
+            step (int, optional): step for calculation of mean diurnal albedo. Defaults to 1 (s).
+            year (int, optional): year of calculation . Defaults to None (current year).
+        """
+
         self._a = sun #module sun
         self._sec_in_min = 60
         self._step = step
@@ -49,7 +66,14 @@ class albedo:
     
 
     
-    def load_parameters(self,soil_curve,location,errors=[]):
+    def load_parameters(self,soil_curve:Sequence[float],location:tuple,errors:Sequence[float]=[]) -> None:
+        """Load parameters of soil surface, location and errors
+
+        Args:
+            soil_curve (list of [float]): soil model fitted by soilCurve class
+            location (tuple): tuple with latitude and longitude
+            errors (list of [float], optional): errors (tolerance), values between 0 and 1 (possibly no more than 0.11). Defaults to [].
+        """
         self._soil = soil_curve
         self._location = Observer(*location)
     
@@ -83,17 +107,35 @@ class albedo:
         colnames +=['SLT_sunset']
         self.colnames = colnames
     
-    def set_year(self,year):
+    def set_year(self,year:int) -> None:
+        """Set current year
+
+        Args:
+            year (int): year to set
+        """
         self._year = year
     
-    def set_date_by_day(self,day_of_the_year,year=None):
+    def set_date_by_day(self,day_of_the_year:int,year:int=None) -> None:
+        """set date to calculate diurnal albedo as day of the year
+
+        Args:
+            day_of_the_year (int): Jan-01 is the first day of the year
+            year (int, optional): year to set. Current year if None. Defaults to None.
+        """
         if year is not None:
             self._year = year
         self._day_of_the_year = day_of_the_year
         self._current_date = datetime.datetime(self._year, 1, 1) + datetime.timedelta(self._day_of_the_year- 1)
         self._calculate_day()
     
-    def set_date_by_date(self,day,month,year=None):
+    def set_date_by_date(self,day:int,month:int,year:int=None) -> None:
+        """set date to calculate diurnal albedo as day and month
+
+        Args:
+            day (int):
+            month (int): month. Jan is the first
+            year (int, optional): year. Current year if None. Defaults to None.
+        """
         if year is None:
             year = self._year
         self._current_date = datetime.datetime(year,month,day)
@@ -127,7 +169,7 @@ class albedo:
     def slt_noon_time(self):
         return self._twelve_noon
     
-    def _angle(self,step,i):
+    def _angle(self,step:int,i:int) -> float:
         h = self._utm_time['noon'] + datetime.timedelta(0,self._sec_in_min*step*i)
         an = self._a.elevation(self._location,h)
         return 90-an
@@ -157,21 +199,50 @@ class albedo:
         self._slt_time['sunrise']  = self._slt_time['noon'] - (self._utm_time['noon'] - self._utm_time['sunrise'])
         self._slt_time['sunset']  = self._slt_time['noon'] + (self._utm_time['sunset'] - self._utm_time['noon'])
     
-    def describe_day(self):
+    def describe_day(self) -> tuple:
+        """Returns tuple with:
+            - current date
+            - solar zenith angle at noon
+            - half length of the day
+            - time of sunrise (UTM)
+            - time of noon (UTM)
+            - time of sunset (UTM)
+
+        Returns:
+            tuple: tuple with day description
+        """
         return self.print_current_date(),self._angle(self._step,0),str(self.half_length_of_the_day), \
             self._utm_time['sunrise'].strftime("%H:%M:%S"), \
             self._utm_time['noon'].strftime("%H:%M:%S"), \
             self._utm_time['sunset'].strftime("%H:%M:%S")                           
 
-    def get_mean_albedo(self):
+    def get_mean_albedo(self) -> float:
+        """Returns mean diurnal albed
+
+        Returns:
+            float: Mean diurnal albedo
+        """
         return self._albedos.mean()   
 
-    def get_albedo_max_error(self):
+    def get_albedo_max_error(self) -> float:
+        """Calculate maximum possible albedo for current day at given location
+
+        Returns:
+            float: maximum albedo for current day
+        """
         mean_value = self.get_mean_albedo()
         min_value = self._albedos.min()
         return (1-min_value/mean_value)*100    
     
-    def get_mean_albedo_time_delta(self,value):
+    def get_albedo_time_delta(self,value:float) -> datetime.timedelta:
+        """Find the timedelta (from the noon) when given albedo aoccurs 
+
+        Args:
+            value (float): value of albedo
+
+        Returns:
+            datetime.timedelta or None: timedelta from the noon or None if value smaller than minimum albedo
+        """
         if self._albedos.min() >= value:
             return None
         below_value = np.where(self._albedos<value)[0].max()
@@ -186,16 +257,25 @@ class albedo:
         return local_time
 
     def _val_and_time(self,value,coef):
-        delta = self.get_mean_albedo_time_delta(value)
+        delta = self.get_albedo_time_delta(value)
         if delta is None:
             return None,None
         else:
             return value,(self._twelve_noon+coef*delta).time()
         
 
-    def get_albedo_main_times(self):
+    def get_albedo_main_times(self) -> tuple:
+        """return complex tuple including:
+           - day
+           - times of sunrise, noon, sunset and times when specific albedo occurs (errors) i UTM
+           - times of sunrise, noon, sunset and times when specific albedo occurs (errors) i SLT
+           - values of albedo in given times
+
+        Returns:
+            tuple: complex tuple of lists
+        """
         value = self.get_mean_albedo()
-        delta = self.get_mean_albedo_time_delta(value)
+        delta = self.get_albedo_time_delta(value)
     
         utm_am_time = self._utm_time['noon'] - delta
         utm_pm_time = self._utm_time['noon'] + delta
@@ -286,7 +366,12 @@ class albedo:
         self._aggregate()
         return self._agregated_values
     
-    def times_DataFrame(self):
+    def times_DataFrame(self) -> pd.DataFrame:
+        """returns aggregated times in a form of data frame
+
+        Returns:
+            pd.DataFrame: UTM times, SLT times, albedo, sun elevation
+        """
         if self._agregated_values is None:
             self._aggregate()
         
@@ -296,7 +381,15 @@ class albedo:
         self._agregated_values = None
         return df
     
-    def get_record(self,header=False):
+    def get_record(self,header:bool=False) -> pd.Series:
+        """returns data in the form of database record for given day. Intended to use with GUI
+
+        Args:
+            header (bool, optional): return data with column headers. Defaults to False.
+
+        Returns:
+            pd.Series: record for given fay
+        """
         w = self.get_albedo_main_times()
         mean_albedo = round(self.get_mean_albedo(),5)
         max_error = round(self.get_albedo_max_error(),5)
@@ -306,7 +399,14 @@ class albedo:
         else:
             return record
     
-    def plot_time_curve(self,figure=None,suptitle=''):
+    def plot_time_curve(self,figure:Union(plt.Axes,str)=None,suptitle:str='') -> None:
+        """Plot complex figure of changes of diurnal albedo at given location in given day.
+            Figure can be:
+
+        Args:
+            figure (plt.Axes or str, optional): existing figure object if exist. Defaults to None new figure. Str must be a path to file.
+            suptitle (str, optional): Custom soil name part for figure. Defaults to '' generates standard header without soil name.
+        """
         mean_albedo_value = self.get_mean_albedo()
         errors = self._errors
         times =self._get_times_day_serie()
@@ -318,7 +418,7 @@ class albedo:
         n = len(w_times)//2
         central = n//2
         
-        delta = self.get_mean_albedo_time_delta(mean_albedo_value)
+        delta = self.get_albedo_time_delta(mean_albedo_value)
         slt_am_time = self._slt_time['noon'] - delta
         slt_pm_time = self._slt_time['noon'] + delta
         
@@ -402,7 +502,7 @@ class albedo:
         plt.close()
        
     def plot_time_bar(self,figure=None,time=True,labels=False,errors=[]):
-        #TODO: całość wymaga jeszcze weryfikacji
+        #TODO: It is under constraction
        
         mean_albedo_value = self.get_mean_albedo()
         w = self.get_albedo_main_times(mean_albedo_value,errors=errors)
@@ -416,7 +516,7 @@ class albedo:
         trange = xmax-xmin
         regular_xticks = np.linspace(xmin,xmax,9)
         ticks = xticks if time is True else regular_xticks
-        #TODO: Dodać wschód i zachód słońca
+        #FIXME: Add sunrise and sunset
         #return (ticks,labels)
         fig = plt.figure(figsize=(8,0.4)) if type(figure) is str or figure is None else figure
         ax = fig.add_subplot(111)
@@ -425,7 +525,7 @@ class albedo:
         m2=(xticks[-1]-xmin)/trange
         ax.axhline(y=1,c='#AAAAAA',lw=0.5,zorder=1,ls='--')
         ax.axhline(y=1,xmin=m1,xmax=m2,c='#446683',lw=4,zorder=2)
-
+        
         plt.xticks(rotation=90)
         ax.get_yaxis().set_visible(False)
         ax.spines['bottom'].set_color(None)

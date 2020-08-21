@@ -39,6 +39,8 @@ def read_csv(fileName: str) -> pd.DataFrame:
 
 class soil():
     def __init__(self):
+        """set coefficient of soil
+        """
         self._const = {}
         self._const[574] = -5795.4
         self._const[1087] = -510.24
@@ -125,6 +127,12 @@ class soil():
     
     def exportSoil(self,name:str,lat:float=None,lon:float=None) -> dict:
         """export soil dict formatted to be used with soil database
+            - name - name
+            - coords-  = (lat,lon)
+            - reflectance - original values of reflectance measured at given wavelength(0-1)
+            - wavelengths - = original values of wavelengths, ussualy between 350 and 2500, in nm
+            - params - = second derivatives at given wavelength
+            - a45 - = spectral part of A45 (without constant and T3D compoentent)
 
         Args:
             name (str): name of soil/location
@@ -324,11 +332,11 @@ class soilCurve():
         self.__y_test = None
     
    
-    def fit(self,GL:float,T3D:float,HSD:float,soilName:str='') -> None:
+    def fit(self,GL:dict,T3D:float,HSD:float,soilName:str='') -> None:
         """fit soil albedo model to the generated date
 
         Args:
-            GL (float): soil spectral part of A45 parameter
+            GL (dict): soil second derivatives of spectral components at given wavelengths
             T3D (float): terrain 3D ratio (ratio between real surface and flat surface)
             HSD (float): roughness in mm
             soilName (str, optional): Name for soil. Defaults to ''.
