@@ -399,7 +399,7 @@ class albedo:
         else:
             return record
     
-    def plot_time_curve(self,figure:Union(plt.Axes,str)=None,suptitle:str='') -> None:
+    def plot_time_curve(self,figure:Union[plt.figure,str]=None,suptitle:str='') -> None:
         """Plot complex figure of changes of diurnal albedo at given location in given day.
             Figure can be:
 
