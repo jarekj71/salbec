@@ -1,10 +1,10 @@
-cp GUI -r ../install_air/albedo/ -u
-cp albedo.py ../install_air/albedo/ -u
-cp soil.py ../install_air/albedo/ -u
-cp SOILMANAGER -r ../install_air/albedo/ -u
+cp GUI -r ../salbec_install/air/albedo/ -u
+cp albedo.py ../salbec_install/air/albedo/ -u
+cp soil.py ../salbec_install/air/albedo/ -u
+cp SOILMANAGER -r ../salbec_install/air/albedo/ -u
 
-cp GUI -r ../install_pro/albedo/ -u
-cp albedo.py ../install_pro/albedo/ -u
-cp soil.py ../install_pro/albedo/ -u
-cp SOILMANAGER -r ../install_pro/albedo/ -u
+cp GUI -r ../salbec_install/pro/albedo/ -u
+cp albedo.py ../salbec_install/pro/albedo/ -u
+cp soil.py ../salbec_install/pro/albedo/ -u
+cp SOILMANAGER -r ../salbec_install/pro/albedo/ -u
 
