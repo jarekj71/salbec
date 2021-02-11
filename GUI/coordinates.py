@@ -84,7 +84,7 @@ class latlonWidget(QtWidgets.QWidget,baseGui):
     def setCoordinatesFromSoil(self,coords):
         if self.blockCheck.isChecked():
             return # do nothin
-        lon,lat=coords
+        lat,lon=coords
         if lat is not None and lon is not None:
             self.latEdit.setText(str(lat))
             self.lonEdit.setText(str(lon))

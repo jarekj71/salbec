@@ -8,6 +8,8 @@ __pycache__/
 
 .SOILS
 tmp*
+documentation
+*xlsx
 
 # Distribution / packaging
 .Python
