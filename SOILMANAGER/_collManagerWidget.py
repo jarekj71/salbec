@@ -184,8 +184,8 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         batchImport(self.import_file_name,database,listonly=False,selection=selection)
         self.soilCollections.reloadSoilDataModel()
         self._select_in_list(selection)
-        self.import_file_name = None
         self.message("{} Imported".format(os.path.basename(self.import_file_name)))
+        self.import_file_name = None
 
     def selectCollection(self,index):
         collectionModel = self.soilCollections.getModel()

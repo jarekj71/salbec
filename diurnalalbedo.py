@@ -91,7 +91,7 @@ class albedo:
             self._error_colors.append(color)    
         
         colnames = []
-        colnames += ['day','date','mean_albedo','max_error']
+        colnames += ['Day','Date','Mean_albedo','Max_error']
         colnames += ["UTM_sunrise",'UTM_am_mat','UTM_noon','UTM_pm_mat','UTM_sunset']# mat - mean albedo time
         colnames +=['SLT_sunrise']
         for error in errors[::-1]:
@@ -484,12 +484,14 @@ class albedo:
         tick_spacing=3600
         axn.xaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
         axn.set_xlim([datetime.time(0,0), datetime.time(23,59,59)])
+        axn.set_ylim(top=1)
         axn.axhline(y = mean_albedo_value,color=mean_color_H,linestyle="--",alpha=0.5)
         axn.axvline(x = w_times[central],color=mean_color_V,linestyle="--",linewidth=2)
         axn.axvline(x = w_times[n+central],color=mean_color_V,linestyle="--",linewidth=2)
         axn.set_title("Full day albedo change")
         axn.set_xlabel("Solar Local Time")
         axn.set_ylabel("Albedo")
+        
 
         for ax in fig.axes:
             ax.tick_params(axis='x', labelrotation=45, labelsize=8)
