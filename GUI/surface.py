@@ -215,3 +215,7 @@ class curveFitWidget(QtWidgets.QWidget,baseGui):
 
     def getSoilParams(self):
         return self.curve.get_soil_params()     
+
+    def refreshSoilCombo(self):
+        selection = self._collections.getSoilsNames()
+        self._collections.setActiveSelection(*selection)

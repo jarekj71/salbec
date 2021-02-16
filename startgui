@@ -25,8 +25,9 @@ app=QtWidgets.QApplication(sys.argv)
 class mainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setFixedSize(1600,1024)
-        #nazwa aplikacji
+        #self.setFixedHeight(1024)
+        #self.setFixedSize(1600,1024)
+        self.setWindowTitle("SAlbeC - Soil Albedo Calculator")
        
         self.collections = soilsCollections()
         self.base = baseGui()
@@ -84,7 +85,7 @@ class mainWindow(QtWidgets.QMainWindow):
     def soilImporter_clicked(self):
         self.soiImporter.show()
         self.soiImporter.exec_()
-        #self.curveFit.refreshSoilCombo()
+        self.curveFit.refreshSoilCombo()
         
     def latlonWidgetSetCoords(self):
         self.coordsSet.setCoordinatesFromSoil(self.curveFit.coordinates())
