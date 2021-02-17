@@ -27,5 +27,4 @@ If use virtual environment, change shebang #!/usr/bin/python in startgui file to
 To run the software just enter salbec directory, open the terminal and type ./startgui
 
 
-** IMPORTANT note to reviewers** 
-currently I must commit some fixes including documentation and one deeply lurking error. Plase wait till Monday, Feb 14 for newest version.
+
