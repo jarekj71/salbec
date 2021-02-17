@@ -16,7 +16,7 @@ from matplotlib.figure import Figure
 import matplotlib
 matplotlib.use('Qt5Agg')
 
-from soilalbedo import soilCurve
+from soilalbedo import soilModel
 from GUI.baseGui import baseGui
 
 class curvePlot(QtWidgets.QDialog,baseGui):
@@ -198,8 +198,8 @@ class curveFitWidget(QtWidgets.QWidget,baseGui):
             self.HSDEdit.clear()
             return
 
-        self.curve = soilCurve()
-        self.curve.fit(self._soil['a45'],T3D,HSD,self._soil['name'])
+        self.curve = soilModel()
+        self.curve.fit(self._soil['spectra'],T3D,HSD,self._soil['name'])
         
     def plotCurve(self):
         self.fitCurve()
@@ -210,12 +210,11 @@ class curveFitWidget(QtWidgets.QWidget,baseGui):
     def getCurve(self):
         if self.curve is None:
             return None
-        return self.curve.get_curve_model()
-
+        return self.curve.get_model_coefs()
 
     def getSoilParams(self):
         return self.curve.get_soil_params()     
 
     def refreshSoilCombo(self):
-        selection = self._collections.getSoilsNames()
-        self._collections.setActiveSelection(*selection)
+        if not self._collections.isActiveSelection():
+            self._collections.setActiveSelection() #all soils

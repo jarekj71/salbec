@@ -3,7 +3,7 @@
 Python Soil ALBEdo Calculator
 Authors: Jerzy Cierniewski (concept) & jarosław Jasiewicz (programming)
 copyrights: Adam Mickiewicz University in Poznań & authors
-Licence: GPL-Compatibile
+Licence: MIT 
 This work was supported by the Polish National Science Centre as part of the framework of project no. 2014/13/B/ST10/02111.
 
 # Instalation
@@ -22,7 +22,7 @@ Check if following modules are installed:
 
 To use code as python library add your destination to system path. Gui mode does not require it.
 
-If use virtual environment, change shebang #!/usr/bin/python in startgui file to your venv path
+If use virtual environment, change shebang #!/usr/bin/python in startgui file to your virtual environment path
 
 To run the software just enter salbec directory, open the terminal and type ./startgui
 

@@ -15,13 +15,13 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         super().__init__()
         
         self.soilListWidget = soilList
-        self.soilCollections = collections
+        self._collections = collections
         self.currentIndex = None
         self.import_file_name = None
         
         self.collectionsList = QtWidgets.QListView()
         self.collectionsList.setMaximumWidth(190)
-        self.collectionsList.setModel(self.soilCollections.getModel()) 
+        self.collectionsList.setModel(self._collections.getModel()) 
         self.newCollection = QtWidgets.QLineEdit()
         self.newCollection.setMaximumWidth(190)
        
@@ -144,12 +144,12 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         if fileName=="":
             return
         
-        database = self.soilCollections.getSoilsDatabase()
+        database = self._collections.getSoilsDatabase()
         names = batchImport(fileName,database,listonly=True)
         if names is None:
             self.warning("Nothing to import or wrong structure of the data")
             return
-        soilsInDatabase = self.soilCollections.getSoilsNames()
+        soilsInDatabase = self._collections.getSoilsNames()
        
         if len(set(soilsInDatabase).intersection(names)):
             self.warning("Some soil names are already present in database","Reset and check import file or import only selected soils")
@@ -170,7 +170,7 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
                 
         resolution = self.resEdit.value()
         selection = self.exportText.toPlainText().split(",")
-        database = self.soilCollections.getSoilsDatabase()
+        database = self._collections.getSoilsDatabase()
 
         batchExport(fileName,selection,database,resolution)
         self.message("{} Exported".format(os.path.basename(fileName)))
@@ -180,26 +180,26 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
             return
         
         selection = self.importText.toPlainText().split(",")
-        database = self.soilCollections.getSoilsDatabase()
+        database = self._collections.getSoilsDatabase()
         batchImport(self.import_file_name,database,listonly=False,selection=selection)
-        self.soilCollections.reloadSoilDataModel()
+        self._collections.reloadSoilDataModel()
         self._select_in_list(selection)
         self.message("{} Imported".format(os.path.basename(self.import_file_name)))
         self.import_file_name = None
 
     def selectCollection(self,index):
-        collectionModel = self.soilCollections.getModel()
-        soilModel = self.soilCollections.getSoilsDataModel()
+        collectionModel = self._collections.getModel()
+        soilModel = self._collections.getSoilsDataModel()
         
         collectionName = collectionModel.data(index,QtCore.Qt.DisplayRole)
         self.currentCollectionName = collectionName
-        collectionItems = self.soilCollections.getCollection(collectionName)
+        collectionItems = self._collections.getCollection(collectionName)
         self._select_in_list(collectionItems)
 
         self.currentIndex = index    
 
     def _select_in_list(self,selection):
-        soilModel = self.soilCollections.getSoilsDataModel()
+        soilModel = self._collections.getSoilsDataModel()
         self.soilListWidget.selectionModel().clear()
         for i in range(soilModel.rowCount()):
             ix = soilModel.index(i, 0)
@@ -216,22 +216,25 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
     
     def _getSelection(self):
         indexes = self.soilListWidget.selectionModel().selectedIndexes()
-        soilModel = self.soilCollections.getSoilsDataModel()
+        soilModel = self._collections.getSoilsDataModel()
         selection = [soilModel.data(index,QtCore.Qt.DisplayRole) for index in indexes]
         return selection
 
     def _clearCurrentSelection(self):
         self.soilListWidget.selectionModel().clear()
+        self._collections.deactivateSelection()
+        
 
     def clearAll(self):
         self._clearCurrentSelection()
-        self.collectionsList.selectionModel().clear()
+        #self.collectionsList.selectionModel().clear()
         self.exportText.clear()
         self.importText.clear()
+
   
     def useButton_clicked(self):
         selection = self._getSelection()
-        self.soilCollections.setActiveSelection(*selection)
+        self._collections.setActiveSelection(*selection)
         
     def resetButton_clicked(self):
         if self.currentIndex is None:
@@ -241,12 +244,12 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         
     def modifyButton_clicked(self):
         selection = self._getSelection()
-        warning = self.soilCollections.modifyCollection(self.currentCollectionName,*selection)
+        warning = self._collections.modifyCollection(self.currentCollectionName,*selection)
         if warning:
             self.warning(*warning)
         
     def deleteButton_clicked(self):
-        warning = self.soilCollections.removeCollection(self.currentCollectionName)
+        warning = self._collections.removeCollection(self.currentCollectionName)
         if warning:
             self.warning(*warning)
             return
@@ -261,7 +264,7 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         if selection == []:
             self.warning("cannot add empty collection")
             return
-        warning = self.soilCollections.addCollection(newCollectionName,*selection)
+        warning = self._collections.addCollection(newCollectionName,*selection)
         if warning:
             self.warning(*warning)
             return

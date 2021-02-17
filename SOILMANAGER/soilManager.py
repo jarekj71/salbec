@@ -20,8 +20,8 @@ class soilsDialog(QtWidgets.QDialog,baseGui):
         self.setFixedSize(800,600)
         self.setWindowTitle("Soil manager")
         self.currentSoilName = None
-        self.collections = collections
-        self.listModel = self.collections.getSoilsDataModel()
+        self._collections = collections
+        self.listModel = self._collections.getSoilsDataModel()
 
         self.soilList = QtWidgets.QListView()
         self.soilList.setMinimumWidth(190)
@@ -42,8 +42,8 @@ class soilsDialog(QtWidgets.QDialog,baseGui):
         # tab with soil manager is 1
         
         
-        self.collectionsManager = _collectionsManager(self.soilList,self.collections)
-        self.soilsManager = _soilsManager(self.soilList,self.collections)
+        self.collectionsManager = _collectionsManager(self.soilList,self._collections)
+        self.soilsManager = _soilsManager(self.soilList,self._collections)
         self.tab_changed(0) #inital position
         
         tabs = QtWidgets.QTabWidget()

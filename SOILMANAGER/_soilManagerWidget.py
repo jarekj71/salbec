@@ -11,7 +11,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib
 matplotlib.use('Qt5Agg')
-from soilalbedo import soil, exportSoilToText
+from soilalbedo import soilSpectrum, exportSoilToText
 from GUI.baseGui import baseGui
 
 class _soilsManager(QtWidgets.QWidget,baseGui):
@@ -25,8 +25,8 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         self.currentSoilName = None
         self.plotted = False
         self.soilListWidget = soilList
-        self.collections = collections
-        self._soilDatabase = self.collections.getSoilsDatabase()
+        self._collections = collections
+        self._soilDatabase = self._collections.getSoilsDatabase()
 
         #upper layout
         self.soilLabel = QtWidgets.QLabel("")
@@ -149,7 +149,7 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
             getOpenFileName(self,"File to take spectrum from", self.inputDir,filetypes) #2B
         if fileName=="":
             return
-        self.gl = soil()
+        self.gl = soilSpectrum()
         warning = self.gl.importFromFile(fileName)
         if warning:
             self.warning(*warning)
@@ -161,7 +161,7 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         self.canvas.draw()
         self.plotted = True
         self.soilLabel.setText("From file: {}".format(soilFileName))
-        self.a45Label.setText("spectrum mod: {}".format(round(self.gl.a45,6)))
+        self.a45Label.setText("spectrum mod: {}".format(round(self.gl.spectra,6)))
         self.soilNameField.setText(self.gl.soilName)
         self.latField.setText(str(self.gl.coordinates[0]))
         self.lonField.setText(str(self.gl.coordinates[1]))       
@@ -192,7 +192,7 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
     def soil_clicked(self,soilName):
         soilPath = self._soilDatabase.getPath(soilName)
         soilData = pickle.load(open(soilPath,"rb"))
-        self.gl = soil()
+        self.gl = soilSpectrum()
         soilName,lat,lon = self.gl.importFromDatabase(soilData)
         self.latField.setText(str(lat))
         self.lonField.setText(str(lon))
@@ -204,7 +204,7 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         self.canvas.draw()
         self.plotted = True
         self.soilLabel.setText("From database: {}".format(soilName))
-        self.a45Label.setText("spectrum mod: {}".format(round(self.gl.a45,6)))
+        self.a45Label.setText("spectrum mod: {}".format(round(self.gl.spectra,6)))
         self.addButton.setEnabled(False)
         self.modButton.setEnabled(True)
         self.remButton.setEnabled(True)
@@ -229,7 +229,7 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         else:
             self.gl = None
             self._clearForm()
-            self.collections.reloadSoilDataModel()
+            self._collections.reloadSoilDataModel()
             self.message("Soil {} added to database".format(soilName))
         return
     
@@ -239,7 +239,7 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         if warning:
             self.warning(*warning)
             return 
-        self.collections.reloadSoilDataModel()
+        self._collections.reloadSoilDataModel()
         self._clearForm()
         self.message("Soil {} removed".format(soilName))
         
@@ -254,7 +254,7 @@ class _soilsManager(QtWidgets.QWidget,baseGui):
         if warning:
             self.warning(*warning)
             return
-        self.collections.reloadSoilDataModel()
+        self._collections.reloadSoilDataModel()
         self._clearForm()
         self.message("Soil {} modified".format(self.currentSoilName))
         self.currentSoilName = None

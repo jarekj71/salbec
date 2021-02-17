@@ -58,7 +58,7 @@ class baseGui():
  
     def initIO(self):
         if self.isBase():
-            self.setupfile = os.path.join(os.getcwd(),".SOILS","setup")
+            self.setupfile = os.path.join(os.getcwd(),"GUI","setup")
             self.readIO()
  
     def reset(self):

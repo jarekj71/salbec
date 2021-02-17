@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.ticker as ticker
 from pandas.plotting import register_matplotlib_converters
+from soilalbedo import soilModel
 register_matplotlib_converters()
 
 def time_since_midnight(t:datetime.time) -> datetime.timedelta:
@@ -66,7 +67,7 @@ class albedo:
     
 
     
-    def load_parameters(self,soil_curve:Sequence[float],location:tuple,errors:Sequence[float]=[]) -> None:
+    def load_parameters(self,soil_model:Sequence[float],location:tuple,errors:Sequence[float]=[]) -> None:
         """Load parameters of soil surface, location and errors
 
         Args:
@@ -74,7 +75,7 @@ class albedo:
             location (tuple): tuple with latitude and longitude
             errors (list of [float], optional): errors (tolerance), values between 0 and 1 (possibly no more than 0.11). Defaults to [].
         """
-        self._soil = soil_curve
+        self._soil_model = soil_model
         self._location = Observer(*location)
     
         if len(errors) > 0:
@@ -175,8 +176,8 @@ class albedo:
         return 90-an
         
     def _aTS(self,X): #albedo curve
-        return np.exp((self._soil[0]+self._soil[2]*X)/
-                      (1+self._soil[1]*X+self._soil[3]*X**2))
+        return np.exp((self._soil_model[0]+self._soil_model[2]*X)/
+                      (1+self._soil_model[1]*X+self._soil_model[3]*X**2))
 
     def _calculate_day(self):
         self._utm_time = self._a.sun(self._location,self._current_date)
@@ -366,7 +367,7 @@ class albedo:
         self._aggregate()
         return self._agregated_values
     
-    def times_DataFrame(self) -> pd.DataFrame:
+    def get_diurnal_albedo(self) -> pd.DataFrame:
         """returns aggregated times in a form of data frame
 
         Returns:
@@ -381,7 +382,7 @@ class albedo:
         self._agregated_values = None
         return df
     
-    def get_record(self,header:bool=False) -> pd.Series:
+    def get_day_record(self,header:bool=False) -> pd.Series:
         """returns data in the form of database record for given day. Intended to use with GUI
 
         Args:
@@ -558,6 +559,6 @@ def batch_albedo_main_times(albedo,start_day=1,end_day=365,interval=1):
     results = []
     for day_of_year in range(start_day,end_day+1,interval):
         albedo.set_date_by_day(day_of_year)
-        record = albedo.get_record()
+        record = albedo.get_day_record()
         results.append(record)
     return pd.DataFrame(results,columns=albedo.colnames)

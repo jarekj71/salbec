@@ -63,7 +63,6 @@ class mainWindow(QtWidgets.QMainWindow):
         soilImporterButton.clicked.connect(self.soilImporter_clicked)
         self.curveFit.coordSignal.connect(self.latlonWidgetSetCoords)
         self.coordsSet.setCoordinatesFromSoil(self.curveFit.coordinates())
-        #self.collections.collectionSignal.connect(self.curveFit.refreshSoilCombo)
         setButton.clicked.connect(self.setup_clicked)
         ##        
         runButton.clicked.connect(self.run)

@@ -37,7 +37,7 @@ def read_csv(fileName: str) -> pd.DataFrame:
     tmp = pd.read_csv(fileName,header=None,sep=sep,decimal=dec)
     return tmp
 
-class soil():
+class soilSpectrum():
     def __init__(self):
         """set coefficient of soil
         """
@@ -109,9 +109,9 @@ class soil():
 
     
     @property
-    def a45(self):    
-        a45 = sum(self._gl.values())
-        return a45
+    def spectra(self):    
+        spectra = sum(self._gl.values())
+        return spectra
 
     @property
     def params(self):
@@ -148,7 +148,7 @@ class soil():
         soil['reflectance'] = self._reflectance
         soil['wavelengths'] = self._wavelengths
         soil['params'] = self._gl
-        soil['a45'] = self.a45
+        soil['spectra'] = self.spectra
         return soil
     
     def importFromDatabase(self,soil:dict) -> tuple:
@@ -169,7 +169,7 @@ class soil():
         return name,lat,lon
     
 
-    def drawSpectrum(self,ax: plt.Axes,lines:bool=True,title:str=None) -> None:
+    def drawSpectrum(self,ax:plt.Axes=None,lines:bool=True,title:str=None) -> None:
         """plot spectrum on given Axes. Axes must be created before method call
 
         Args:
@@ -177,6 +177,7 @@ class soil():
             lines (bool, optional): Plot lines of important wavelengths. Defaults to True.
             title (str, optional): Custom title, None to keep default. Defaults to None.
         """
+        ax = ax or plt.gca()
         ax.plot(self._wavelengths,self._reflectance)
         ax.set_ylabel("Reflectance")
         ax.set_xlabel("Wavelength (nm)")
@@ -286,13 +287,13 @@ def batchImport(fileName:str,database:soilDatabase=None,listonly:bool=False,sele
     for name in names:
         coords = coordinates[name].values
         reflectance = spectra[name].values
-        s = soil()
+        s = soilSpectrum()
         s.importSeries(wavelengths,reflectance)
         sl = s.exportSoil(name,*coords)
         sldb.addToDatabase(sl)
     return None
 
-class soilCurve():
+class soilModel():
     def __init__(self):
         self.__x_test=np.concatenate((np.arange(0,89.),np.linspace(89,90,9)))
         self.__y_test = None
@@ -332,17 +333,17 @@ class soilCurve():
         self.__y_test = None
     
    
-    def fit(self,GL:dict,T3D:float,HSD:float,soilName:str='') -> None:
+    def fit(self,spectra:float,T3D:float,HSD:float,soilName:str='') -> None:
         """fit soil albedo model to the generated date
 
         Args:
-            GL (dict): soil second derivatives of spectral components at given wavelengths
+            GL (float): soil second derivatives of spectral components at given wavelengths
             T3D (float): terrain 3D ratio (ratio between real surface and flat surface)
             HSD (float): roughness in mm
             soilName (str, optional): Name for soil. Defaults to ''.
         """
 
-        self.GL = GL
+        self.GL = spectra
         self.T3D = T3D 
         self.HSD = HSD
         self.name = soilName
@@ -438,13 +439,13 @@ class soilCurve():
             self.__abcd[index] = self.__reset_abcd[index]*(1+kwargs[key])
 
      
-    def get_curve_model(self) -> list:
-        """Returns curve model as list [a,b,c,d]
+    def get_model_coefs(self) -> list:
+        """Returns model coefficients as list [a,b,c,d]
         """
         return self.__abcd
     
-    def get_curve_params(self) -> dict:
-        """Returns curve model as dict [a,b,c,d]
+    def get_parameters(self) -> dict:
+        """Returns model coefficeints as dict [a,b,c,d]
         """
 
         curve_params = {}

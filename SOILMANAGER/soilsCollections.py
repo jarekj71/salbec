@@ -24,6 +24,7 @@ class soilsCollections():
         
         self.selectionModel = QtCore.QStringListModel()
         self.selectionModel.setStringList(self.getSoilsNames())
+        self._isActiveSelection = False
         
     #Database
     def getSoilsNames(self):
@@ -84,5 +85,17 @@ class soilsCollections():
 
     def setActiveSelection(self,*activeSelection):
         if list(activeSelection) == []:
+            self.deactivateSelection()
             activeSelection = self.getSoilsNames()
+        else:
+            self.activateSelection()
         self.selectionModel.setStringList(activeSelection)  
+
+    def isActiveSelection(self):
+        return self._isActiveSelection
+    
+    def deactivateSelection(self):
+        self._isActiveSelection = False
+        
+    def activateSelection(self):
+        self._isActiveSelection = True

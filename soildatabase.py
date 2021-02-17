@@ -24,7 +24,15 @@ class soilDatabase():
             databaseFile (str, optional): Path to databsase file. May not exist. Defaults to None.
         """
         self._databaseDir = databaseDir or ".SOILS"
+        if not os.path.isdir(self._databaseDir):
+            os.mkdir(self._databaseDir)
+            print("directory <{}> created".format(self._databaseDir))
+
         self._soilsDir = os.path.join(self._databaseDir,"soils") 
+        if not os.path.isdir(self._soilsDir):
+            print("nie ma")
+            os.mkdir(self._soilsDir)            
+
         self._databaseFile = databaseFile or os.path.join(self._databaseDir,"soilDatabase.p")
         self._rebuildDatabase()
 
