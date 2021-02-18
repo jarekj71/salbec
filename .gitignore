@@ -8,6 +8,7 @@ __pycache__/
 
 .SOILS
 tmp*
+copy.sh
 
 
 # Distribution / packaging
@@ -64,6 +65,9 @@ coverage.xml
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+
+# Visual studio code
+.vscode
 
 # Flask stuff:
 instance/

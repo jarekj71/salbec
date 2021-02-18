@@ -30,8 +30,8 @@ class soilDatabase():
 
         self._soilsDir = os.path.join(self._databaseDir,"soils") 
         if not os.path.isdir(self._soilsDir):
-            print("nie ma")
-            os.mkdir(self._soilsDir)            
+            os.mkdir(self._soilsDir)
+            print("directory <{}> created".format(self._soilsDir))          
 
         self._databaseFile = databaseFile or os.path.join(self._databaseDir,"soilDatabase.p")
         self._rebuildDatabase()

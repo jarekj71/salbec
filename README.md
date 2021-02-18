@@ -22,9 +22,17 @@ Check if following modules are installed:
 
 To use code as python library add your destination to system path. Gui mode does not require it.
 
-If use virtual environment, change shebang #!/usr/bin/python in startgui file to your virtual environment path
+If use virtual environment, change shebang #!/usr/bin/python3 in startgui file to your virtual environment path
+
+If you use windows with python installed:
+
+#! python3
 
 To run the software just enter salbec directory, open the terminal and type ./startgui
+
+See documentation pdf for details.
+
+**IMPORTANT NOTE** There are still continuous commits (mostly bug fixes and found errors) it means that occasionaly Software may not work correctly. If so please contact maintainer to get help how to solve your problem.
 
 
 
