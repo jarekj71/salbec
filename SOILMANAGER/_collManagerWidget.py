@@ -24,6 +24,7 @@ class _collectionsManager(QtWidgets.QWidget,baseGui):
         self.collectionsList.setModel(self._collections.getModel()) 
         self.newCollection = QtWidgets.QLineEdit()
         self.newCollection.setMaximumWidth(190)
+        self.currentCollectionName = None
        
         leftLayout = QtWidgets.QVBoxLayout()
         leftLayout.addWidget(QtWidgets.QLabel("Soils Collections"))
