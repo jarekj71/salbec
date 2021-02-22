@@ -58,7 +58,7 @@ class curvePlot(QtWidgets.QDialog,baseGui):
             text += "   {}: {}".format(name,value)
         descLayout.addWidget(QtWidgets.QLabel(text))
             
-        self.soilModel = curve.get_curve_model()
+        self.soilModel = curve.get_model_coefs()
         text = ""
         for name,value in zip(['a','b','c','d'],self.soilModel):
             text += "   {}: {}".format(name,round(value,8))

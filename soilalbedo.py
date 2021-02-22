@@ -421,8 +421,8 @@ class soilModel():
         Returns:
             pd.Series: curve parameters
         """
-        cindex = self.get_curve_params().keys()
-        cvalues = self.get_curve_params().values()
+        cindex = self.get_parameters().keys()
+        cvalues = self.get_parameters().values()
         sindex,svalues = list(zip(*self.get_soil_params()))
         index = list(sindex)+list(cindex)
         values = list(svalues)+list(cvalues)
