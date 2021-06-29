@@ -116,7 +116,7 @@ class albedo:
         """
         self._year = year
     
-    def set_date_by_day(self,day_of_the_year:int,year:int=None) -> None:
+    def set_date_by_day(self,day_of_the_year:int,year:int=None) -> bool:
         """set date to calculate diurnal albedo as day of the year
 
         Args:
@@ -127,9 +127,9 @@ class albedo:
             self._year = year
         self._day_of_the_year = day_of_the_year
         self._current_date = datetime.datetime(self._year, 1, 1) + datetime.timedelta(self._day_of_the_year- 1)
-        self._calculate_day()
+        return self._calculate_day()
     
-    def set_date_by_date(self,day:int,month:int,year:int=None) -> None:
+    def set_date_by_date(self,day:int,month:int,year:int=None) -> bool:
         """set date to calculate diurnal albedo as day and month
 
         Args:
@@ -141,7 +141,7 @@ class albedo:
             year = self._year
         self._current_date = datetime.datetime(year,month,day)
         self._day_of_the_year = self._current_date.timetuple().tm_yday
-        self._calculate_day()
+        return self._calculate_day()
         
     @property
     def errors(self):
@@ -180,7 +180,18 @@ class albedo:
                       (1+self._soil_model[1]*X+self._soil_model[3]*X**2))
 
     def _calculate_day(self):
-        self._utm_time = self._a.sun(self._location,self._current_date)
+        ###
+        try:
+            self._utm_time = dict()
+            self._utm_time['noon'] = self._a.noon(self._location,self._current_date)
+            self._utm_time['sunrise'] = self._a.sunrise(self._location,self._current_date)
+            self._utm_time['sunset'] = self._a.sunset(self._location,self._current_date)
+        ###
+        except ValueError:
+            print("no sunrise and sunset")
+            return False
+            
+        #self._utm_time = self._a.sun(self._location,self._current_date)
         self._twelve_noon = self._current_date.replace(hour=12) #12:00
         half_day = self.half_length_of_the_day
         n_steps = int(half_day.seconds/(self._sec_in_min*self._step))
@@ -199,6 +210,7 @@ class albedo:
         self._slt_time['noon'] = self._twelve_noon
         self._slt_time['sunrise']  = self._slt_time['noon'] - (self._utm_time['noon'] - self._utm_time['sunrise'])
         self._slt_time['sunset']  = self._slt_time['noon'] + (self._utm_time['sunset'] - self._utm_time['noon'])
+        return True
     
     def describe_day(self) -> tuple:
         """Returns tuple with:
@@ -558,7 +570,10 @@ def batch_albedo_main_times(albedo,start_day=1,end_day=365,interval=1):
 
     results = []
     for day_of_year in range(start_day,end_day+1,interval):
-        albedo.set_date_by_day(day_of_year)
+        if not albedo.set_date_by_day(day_of_year):
+            continue
         record = albedo.get_day_record()
         results.append(record)
+    if results == []:
+        return None
     return pd.DataFrame(results,columns=albedo.colnames)

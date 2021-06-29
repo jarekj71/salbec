@@ -235,7 +235,9 @@ class resultsWidget(QtWidgets.QWidget,baseGui):
         self.albedo.load_parameters(soil_model,self.location,errors)
         self.data = batch_albedo_main_times(self.albedo,start_day=start_day,end_day=end_day,
                                                   interval=interval)
-       
+        if self.data is None:
+            self.warning("No days with sunrise and sunset")
+            return
         dataModel  = pandasModel(self.data)
         self.resultsTable.setModel(dataModel)
         if self.data is not None:

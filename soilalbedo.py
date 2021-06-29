@@ -65,6 +65,8 @@ class soilSpectrum():
         self.coordinates = None
         if ext in ['.xlsx','.xls']:
             _e = pd.read_excel(fileName,nrows=0)
+            if _e.isnull().values.any():
+                return "Incorrect data format",None
             if _e.columns.values[0] == "symbol" and type(_e.columns.values[1]) is str:
                 coords = pd.read_excel(fileName,nrows=2,index_col="symbol")
                 spectra = pd.read_excel(fileName,skiprows=[1,2])
@@ -273,7 +275,11 @@ def batchImport(fileName:str,database:soilDatabase=None,listonly:bool=False,sele
     sldb = soilDatabase() if database is None else database
     try:
         coordinates = pd.read_excel(fileName,nrows=2,index_col="symbol")
+        if coordinates.isnull().values.any():
+            return "Lack of coordinates",None
         spectra = pd.read_excel(fileName,skiprows=[1,2],index_col="symbol")
+        if spectra.isnull().values.any() :
+            return "Incorrect data format",None
         wavelengths = spectra.index.values
         names = coordinates.columns.values
     except:
