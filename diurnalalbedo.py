@@ -188,7 +188,6 @@ class albedo:
             self._utm_time['sunset'] = self._a.sunset(self._location,self._current_date)
         ###
         except ValueError:
-            print("no sunrise and sunset")
             return False
             
         #self._utm_time = self._a.sun(self._location,self._current_date)
