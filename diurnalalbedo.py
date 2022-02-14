@@ -129,6 +129,18 @@ class albedo:
         self._current_date = datetime.datetime(self._year, 1, 1) + datetime.timedelta(self._day_of_the_year- 1)
         return self._calculate_day()
     
+    def set_date(self,date:datetime.date) -> bool:
+        """set date by datetime date object
+
+        Args:
+            date (datetime.date): date in datetime.date format
+        """
+        self._current_date = datetime.datetime.fromordinal(date.toordinal())
+        self._day_of_the_year = self._current_date.timetuple().tm_yday
+        self._year = self._current_date.year
+        return self._calculate_day()
+    
+    
     def set_date_by_date(self,day:int,month:int,year:int=None) -> bool:
         """set date to calculate diurnal albedo as day and month
 
@@ -553,23 +565,26 @@ class albedo:
         if not labels:
             ax.set_xticklabels([])
         
- 
-def batch_day_description(albedo,start_day=1,end_day=355,ndays=None):
+def drange(start_date,end_date,step=1):
+    for n in range(0,1+int((end_date - start_date).days),step):
+        yield start_date + datetime.timedelta(n)     
+
+
+def batch_day_description(albedo,start_day,end_day,ndays=None):
     
     if ndays is not None:
         end_day = start_day+ndays
     results = []
-    for day_of_the_year in range(start_day,end_day):
-        albedo.set_date_by_day(day_of_the_year)
+    for date_of_year in range(start_day,end_day):
+        albedo.set_date(date_of_year)
         results.append(albedo.describe_day())
     return results        
 
-
-def batch_albedo_main_times(albedo,start_day=1,end_day=365,interval=1):
+def batch_albedo_main_times(albedo,start_day,end_day,interval=1):
 
     results = []
-    for day_of_year in range(start_day,end_day+1,interval):
-        if not albedo.set_date_by_day(day_of_year):
+    for date_of_year in drange(start_day,end_day,interval):
+        if not albedo.set_date(date_of_year):
             continue
         record = albedo.get_day_record()
         results.append(record)

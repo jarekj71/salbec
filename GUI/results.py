@@ -161,8 +161,8 @@ class errorCurveDialog(QtWidgets.QDialog,baseGui):
         canvas.draw()  
     
     def exportButton_clicked(self):
-        times = self.albedo.times_DataFrame()
-        parameters = self.albedo.get_record(header=True)
+        times = self.albedo.get_diurnal_albedo()
+        parameters = self.albedo.get_day_record(header=True)
        
         filetypes = "Excel (*.xlsx)"
         fileName,_ = QtWidgets.QFileDialog.\

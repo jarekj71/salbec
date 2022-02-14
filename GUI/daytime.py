@@ -21,39 +21,37 @@ class selectDayWidget(QtWidgets.QWidget,baseGui):
         this_label = QtWidgets.QLabel("&"+label)
         this_label.setBuddy(self.date)
         self.date.dateChanged.connect(self.dateChange)
-        
-        self.day = QtWidgets.QSpinBox()
-        self.day.setRange(0,365)
-        # recalculate date into day of year
         self.__day_of_year = self.date.date().dayOfYear()
-        self.day.setValue(self.dayOfYear)
-        self.day.valueChanged.connect(self.dayChange)
+        self.dayofyearLabel = QtWidgets.QLabel(self.dayDOI)
         
+        # recalculate date into day of year
         mainLayout = QtWidgets.QHBoxLayout()
         mainLayout.addWidget(this_label)
         mainLayout.addWidget(self.date)
-        mainLayout.addWidget(self.day)
+        mainLayout.addWidget(self.dayofyearLabel)
         self.setLayout(mainLayout)
-
-    def dayChange(self):
-        tmp_day = self.day.value()
-        delta = tmp_day - self.__day_of_year
-        tmp_date = self.date.date()
-        tmp_date = tmp_date.addDays(delta)
-        self.__day_of_year = tmp_day
-        self.date.setDate(tmp_date)
-        
-    def setDay(self,day):
-        #self.__day_of_year = day
-        self.day.setValue(day)
-    
+      
     def dateChange(self):
         self.__day_of_year = self.date.date().dayOfYear()
-        self.day.setValue(self.__day_of_year)
+        self.dayofyearLabel.setText(self.dayDOI)
+    
+    def setDate(self,date):
+        self.date.setDate(date)
+        
+    def getDate(self):
+        return self.date.date()
+    
+    @property
+    def dayDOI(self):
+        return str(self.__day_of_year)+" DOI"
     
     @property
     def dayOfYear(self):
         return self.__day_of_year
+    
+    @property 
+    def year(self):
+        return self.date.date().year()
     
 
 class selectDaysWidget(QtWidgets.QWidget,baseGui):
@@ -96,12 +94,16 @@ class selectDaysWidget(QtWidgets.QWidget,baseGui):
         self.setLayout(mainLayout)
 
     def yearButton_clicked(self):
-        self.startDay.setDay(1)
-        self.endDay.setDay(365)
+        year = self.startDay.year 
+        startDay = QtCore.QDate(year,1,1)
+        self.startDay.setDate(startDay)
+        endDay = QtCore.QDate(year,12,31)
+        self.endDay.setDate(endDay)
+        
         
     def dayButton_clicked(self):
-        day = self.startDay.dayOfYear
-        self.endDay.setDay(day)
+        date = self.startDay.getDate()
+        self.endDay.setDate(date)
 
     def getErrors(self):
         if self.errorsBox.text() == "":
@@ -117,9 +119,12 @@ class selectDaysWidget(QtWidgets.QWidget,baseGui):
 
     def getDays(self):
         interval = self.breakEdit.value()
-        start = self.startDay.dayOfYear
-        stop = self.endDay.dayOfYear
+        #start = self.startDay.dayOfYear
+        #stop = self.endDay.dayOfYear
+        start = self.startDay.getDate()
+        stop = self.endDay.getDate()
+        
         if start>stop:
             self.warning("Start day cannot be later than end day")
             return None
-        return start,stop,interval
+        return start.toPyDate(),stop.toPyDate(),interval
