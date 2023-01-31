@@ -186,11 +186,18 @@ class albedo:
         h = self._utm_time['noon'] + datetime.timedelta(0,self._sec_in_min*step*i)
         an = self._a.elevation(self._location,h)
         return 90-an
-        
+
+    def _angle_fix(self,n_seconds:int) ->float:
+        h = self._utm_time['noon'] + datetime.timedelta(0,n_seconds)   
+        an = self._a.elevation(self._location,h)
+        return 90-an        
+    
+    
     def _aTS(self,X): #albedo curve
         return np.exp((self._soil_model[0]+self._soil_model[2]*X)/
                       (1+self._soil_model[1]*X+self._soil_model[3]*X**2))
 
+    
     def _calculate_day(self):
         ###
         try:
@@ -206,10 +213,17 @@ class albedo:
         self._twelve_noon = self._current_date.replace(hour=12) #12:00
         half_day = self.half_length_of_the_day
         n_steps = int(half_day.seconds/(self._sec_in_min*self._step))
+      
+        #Old
+        #elevations = [self._angle(self._step,i) for i in range(n_steps)]
+        #elevations = elevations + [90]
+        #elevations = np.array(elevations)
         
-        elevations = [self._angle(self._step,i) for i in range(n_steps)]
-        elevations = elevations + [90]
+        #Fix 
+        elev_seconds = np.linspace(0,half_day.seconds,n_steps,endpoint=False)
+        elevations = [self._angle_fix(seconds) for seconds in elev_seconds]+[90]
         elevations = np.array(elevations)
+        
         above = np.where((elevations>=0) &  (elevations <=90))[0]
         self._elevations = elevations[above]
         self._albedos = self._aTS(self._elevations)
