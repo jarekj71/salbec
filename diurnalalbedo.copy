@@ -60,6 +60,7 @@ class albedo:
         self._agregated_values = None
         self._mean_albedo = None
         self._n_steps = None
+        self._albedo_dict = {}
                 
         self._error_starting_colors = [(240,240,48),(175,30,30)]
         self._error_colors = []
@@ -185,11 +186,12 @@ class albedo:
         return self._twelve_noon
   
 
-    def _angle(self,seconds:int) ->float:
-        h = self._utm_time['noon'] + datetime.timedelta(0,seconds)   
+    def _angle(self,n_seconds:int) ->float:
+        h = self._utm_time['noon'] + datetime.timedelta(0,n_seconds)   
         an = self._a.elevation(self._location,h)
         return 90-an        
-        
+    
+    
     def _aTS(self,X): #albedo curve
         return np.exp((self._soil_model[0]+self._soil_model[2]*X)/
                       (1+self._soil_model[1]*X+self._soil_model[3]*X**2))
@@ -206,17 +208,32 @@ class albedo:
         except ValueError:
             return False
             
+        #self._utm_time = self._a.sun(self._location,self._current_date)
         self._twelve_noon = self._current_date.replace(hour=12) #12:00
         half_day = self.half_length_of_the_day
         n_steps = int(half_day.seconds/(self._sec_in_min*self._step))
-    
+      
+        #Old
+        #elevations = [self._angle(self._step,i) for i in range(n_steps)]
+        #elevations = elevations + [90]
+        #elevations = np.array(elevations)
+        
+        #Fix 
+        #elev_seconds_since_noon = np.linspace(0,half_day.seconds,n_steps,endpoint=False)
+        #elevations = [self._angle_fix(seconds) for seconds in elev_seconds_since_noon]+[90]
+        #elevations = np.array(elevations)
+        
+        #above = np.where((elevations>=0) &  (elevations <=90))[0]
+        #self._elevations = elevations[above]
+        #self._albedos = self._aTS(self._elevations)
+        #self._seconds_since_noon = np.append(elev_seconds_since_noon[above[:-1]],half_day.seconds)
+        
+        #Fix 2
     
         elevations = np.array([self._angle(seconds) for seconds in range(half_day.seconds)]) # usunięto +90
         above = np.where((elevations>=0) &  (elevations <=90))[0]
         elevations = elevations[above]
         self._albedos = self._aTS(elevations)
-        self._elevations = elevations # do usunięcia
-        
 
         
         self._utm_time['noon'] = self._utm_time['noon'].replace(microsecond=0)
@@ -262,7 +279,8 @@ class albedo:
         mean_value = self.get_mean_albedo()
         min_value = self._albedos.min()
         return (1-min_value/mean_value)*100    
-
+    
+    '''
     def get_albedo_time_delta(self,value:float) -> datetime.timedelta:
         """Find the timedelta (from the noon) when given albedo aoccurs 
 
@@ -272,6 +290,33 @@ class albedo:
         Returns:
             datetime.timedelta or None: timedelta from the noon or None if value smaller than minimum albedo
         """
+        if self._albedos.min() >= value:
+            return None
+        below_value = np.where(self._albedos<value)[0].max()
+        #print(below_value,value,self._albedos[below_value],self._albedos[below_value+1]) ###
+        
+        #start = below_value * self._sec_in_min
+        #stop = below_value * self._sec_in_min + self._sec_in_min
+        start = int(self._seconds_since_noon[below_value])
+        stop = int(self._seconds_since_noon[below_value+1])
+        
+        
+        #tune = [self._angle(self._step/60,i) for i in range(start,stop)]
+        #tune = np.array(tune)
+        tune = np.array([self._angle_fix(seconds) for seconds in range(start,stop)])
+
+        albedos_tune = self._aTS(tune)
+        #print(tune[1],albedos_tune[1]) ###
+        
+        below_value_tune = np.where(albedos_tune<value)[0].max()
+        #local_time = datetime.timedelta(0,60*int(below_value)+int(below_value_tune))
+        seconds_tune = int(start)+int(below_value_tune)
+        local_time = datetime.timedelta(0,seconds_tune)
+        #print(start,stop,below_value_tune) ###
+        return local_time
+    '''
+
+    def get_albedo_time_delta(self,value:float) -> datetime.timedelta:
         if self._albedos.min() >= value:
             return None
         below_value = np.where(self._albedos<value)[0].max()
@@ -353,34 +398,27 @@ class albedo:
         return day,utm_times,times,values
 
         
-    def _angle_time(self,time:datetime.datetime) ->float:
-        an = self._a.elevation(self._location,time)
-        return 90-an        
-       
+    def _get_times_day_serie(self, UTM = False):
+        delta_step = datetime.timedelta(seconds=self._sec_in_min)
+        noon = self._utm_time['noon'] if UTM else self._slt_time['noon']
+        times_am = [(noon - n * delta_step).time() for n in range(len(self._elevations))]
+        times_pm = [(noon + n * delta_step).time() for n in range(len(self._elevations))]
+        times = times_am[::-1]+times_pm[1:]
+        return times
     
+    def _get_albedos_day_serie(self):
+        return  np.concatenate((np.flip(self._albedos)[:-1],self._albedos))
+          
+    def _get_elevations_day_serie(self):
+
+        return np.concatenate((np.flip(self._elevations)[:-1],self._elevations))
     
     def _aggregate(self):
-        n_steps = int(self.half_length_of_the_day.seconds/(self._sec_in_min*self._step))
-        delta_step = datetime.timedelta(seconds=self._sec_in_min)
-        
-        noon = self._utm_time['noon']
-        times_am = [(noon - n * delta_step) for n in range(n_steps)]
-        times_pm = [(noon + n * delta_step) for n in range(n_steps)]
-        utm_times = times_am[::-1]+times_pm[1:]
-        noon = self._slt_time['noon']
-        times_am = [(noon - n * delta_step) for n in range(n_steps)]
-        times_pm = [(noon + n * delta_step) for n in range(n_steps)]
-        slt_times = times_am[::-1]+times_pm[1:]
-
         aggregate = {} 
-        aggregate['tSLT'] = [t.time() for t in slt_times]
-        aggregate['tUTM'] = [t.time() for t in utm_times]
-        aggregate['elevtions'] = np.array([self._angle_time(time) for time in utm_times])
-        aggregate['albedo'] = self._aTS(aggregate['elevtions'])
-
-        selector = (aggregate['elevtions'] >= 90)
-        aggregate['elevtions'][selector] = 90
-        aggregate['albedo'][selector] = 1
+        aggregate['tSLT'] = self._get_times_day_serie(UTM=False)
+        aggregate['tUTM'] = self._get_times_day_serie(UTM=True)
+        aggregate['albedo'] = self._get_albedos_day_serie()
+        aggregate['elevtions'] = self._get_elevations_day_serie()
 
         aggregate['utc_sunrise_time'] = self._utm_time['sunrise']
         aggregate['utc_sunset_time'] = self._utm_time['sunset']
@@ -392,8 +430,7 @@ class albedo:
 
         
     def time_slider(self):
-        if self._agregated_values is None:
-            self._aggregate()
+        self._aggregate()
         return self._agregated_values
     
     def get_diurnal_albedo(self) -> pd.DataFrame:
@@ -421,8 +458,8 @@ class albedo:
             pd.Series: record for given fay
         """
         w = self.get_albedo_main_times()
-        mean_albedo = round(self.get_mean_albedo(),4)
-        max_error = round(self.get_albedo_max_error(),4)
+        mean_albedo = round(self.get_mean_albedo(),5)
+        max_error = round(self.get_albedo_max_error(),5)
         record = w[0]+[mean_albedo,max_error]+w[1]+w[2]
         if header:
             return pd.Series(record,index=self.colnames)
@@ -439,11 +476,8 @@ class albedo:
         """
         mean_albedo_value = self.get_mean_albedo()
         errors = self._errors
-        if self._agregated_values is None:
-            self._aggregate()
-        
-        times = self._agregated_values['tSLT']
-        y = self._agregated_values['albedo']
+        times =self._get_times_day_serie()
+        y = self._get_albedos_day_serie()
         w = self.get_albedo_main_times()
 
         w_times = w[2][1:-1] # remove sunset and sunrise
@@ -473,13 +507,14 @@ class albedo:
         tick_spacing=900
         ax0.xaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
         error_labels = [str(round(error*100,2))+'%' for error in errors[::-1]]
+        
         for h,er,erc in zip(w_times[:central],error_labels,error_colors):
             ax0.axvline(x = h,color=erc,linestyle="--",linewidth=1,label="error "+er)
 
         ax0.axvline(x = w_times[central],color=mean_color_V,linestyle="--",linewidth=2, label="mean albedo time")
         for h,erc in zip(w_times[central+1:n],error_colors[::-1]):
             ax0.axvline(x = h,color=erc,linestyle="--",linewidth=1)
-
+        
         ax0.axhline(y = mean_albedo_value,color=mean_color_H,linestyle="--",alpha=0.5,label="mean albedo value")
         ax0.set_ylim(min(w_values)*0.9,max(w_values)*2)
         ax0.set_xlim(self._slt_time['sunrise'].time(),slt_am_max.time())
@@ -534,7 +569,6 @@ class albedo:
         if type(figure) is str:
             fig.savefig(figure)
         plt.close()
-        self._aggregate = None
        
     def plot_time_bar(self,figure=None,time=True,labels=False,errors=[]):
         #TODO: It is under constraction
