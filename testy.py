@@ -10,8 +10,10 @@ Created on Mon Feb 27 10:18:24 2023
 import os
 os.chdir(os.path.dirname(__file__))
 from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import datetime
 
 #%%
 from soilalbedo import soilSpectrum, soilModel
@@ -23,18 +25,56 @@ model.fit(xerosol.spectra,1.05,25) # fits model to the spectrum with t3d 1.99 an
 #%%
 from diurnalalbedo import albedo 
 alb = albedo() # create albedo object
-longitude = 0
+longitude = 55
 alb.load_parameters(model.get_model_coefs(),location=(longitude,10.9),errors = [0.02,0.03,0.05]) # load parameters: model, location and errors
 
 #%%
 d=1
 alb.set_date_by_day(d)
+thetimes = alb.get_albedo_main_times()
+alb.plot_time_curve()
+
+
+#%%
+slt = thetimes[2]
+alb._albedos['morning']
+alb._albedos['afternoon']
+x = int(alb.am_half_length_of_the_day.seconds/60)
 angle = alb._elevations
 albed = alb._albedos
-n_seconds = alb.half_length_of_the_day.seconds
+alb.morning_half_length_of_the_day.seconds
+alb.afternoon_half_length_of_the_day.seconds
+alb.full_length_of_the_day.seconds
+alb.get_mean_albedo()
+
+
+noon = alb._utm_time['noon']
+am = noon+alb._mtd
+pm = noon+alb._atd
+#%%
+
+lst = [1,2,3,4,5]
+
+p = lst[::-1]+lst
 
 #%%
 
+np.arange(-10)
+
+wh = np.where(albed<0.26)[0]
+
+np.flatnonzero(np.array([1,9,2,2,2,2,1,5,6,6])>4)
+
+
+
+
+atd,mtd = alb.get_albedo_time_delta(0.26)
+noon = alb._utm_time['noon']
+sunrise = alb._utm_time['sunrise']
+sunset = alb._utm_time['sunset']
+am = noon-atd
+pm = noon+mtd
+#%%
 alb = albedo() # create albedo object
 longitude = 62
 alb.load_parameters(model.get_model_coefs(),location=(longitude,10.9),errors = [0.02,0.03,0.05]) # load parameters: model, location and errors

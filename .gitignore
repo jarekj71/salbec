@@ -30,6 +30,8 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.xlsx
+*.copy
 MANIFEST
 
 # PyInstaller
@@ -135,3 +137,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+seconds.xlsx
