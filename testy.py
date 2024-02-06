@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import datetime
+import pickle
 
 #%%
 from soilalbedo import soilSpectrum, soilModel
@@ -25,8 +26,8 @@ model.fit(xerosol.spectra,1.05,25) # fits model to the spectrum with t3d 1.99 an
 #%%
 from diurnalalbedo import albedo 
 alb = albedo() # create albedo object
-longitude = 55
-alb.load_parameters(model.get_model_coefs(),location=(longitude,10.9),errors = [0.02,0.03,0.05]) # load parameters: model, location and errors
+longitude = 10.68
+alb.load_parameters(model.get_model_coefs(),location=(longitude,29.61),errors = [0.02,0.03,0.05]) # load parameters: model, location and errors
 
 #%%
 d=1
@@ -76,9 +77,90 @@ am = noon-atd
 pm = noon+mtd
 #%%
 alb = albedo() # create albedo object
-longitude = 62
-alb.load_parameters(model.get_model_coefs(),location=(longitude,10.9),errors = [0.02,0.03,0.05]) # load parameters: model, location and errors
+longitude = 10.68
 
+latitudes = pd.read_csv("szerokosci.csv")
+#%%
+
+databases  =[]
+for latitude in latitudes.lat.values:
+    alb.load_parameters(model.get_model_coefs(),location=(latitude,longitude),errors = [0.02,0.03,0.05]) # load parameters: model, location and errors
+    print(latitude)
+
+    mean_albedos = []
+    min_albedos = []
+    angles = []
+    second = []
+
+
+    for i in range(1,366):
+        alb.set_date_by_day(i)
+        mean_albedos.append(alb.get_mean_albedo())
+        min_albedos.append(alb.get_min_albedo())
+        angles.append(alb._angle(0))
+        second.append(alb.full_length_of_the_day)
+    
+    database = pd.DataFrame(np.array([mean_albedos,min_albedos,angles,second]).T,columns=["mean","min","angle","second"],index=range(1,366))
+    databases.append(database)
+
+pickle.dump(databases,open("databases.p","wb+"))
+#%%
+
+fig,axes = plt.subplots(5,2,figsize=(15,15))
+
+for i,ax in enumerate(axes.T.flatten()):
+    database = databases[i+8]
+    ax.plot(database.angle,c="tab:green",lw=3)
+    ax_tween = ax.twinx()
+    ax_tween.plot(database['mean'],c="tab:orange",lw=3)
+    ax.set_title(latitudes.lat.values[i+8])
+
+fig.savefig("przebiegi.pdf")
+#%%
+
+day_172 = pd.DataFrame(columns=database.columns)
+for database, lat in zip(databases,latitudes.lat.values):
+    day_172.loc[lat] = database.loc[172]
+    
+
+day_173 = pd.DataFrame(columns=database.columns)
+for database, lat in zip(databases,latitudes.lat.values):
+    day_173.loc[lat] = database.loc[173]
+
+day_355 = pd.DataFrame(columns=database.columns)
+for database, lat in zip(databases,latitudes.lat.values):
+    day_355.loc[lat] = database.loc[355]
+    
+
+day_356 = pd.DataFrame(columns=database.columns)
+for database, lat in zip(databases,latitudes.lat.values):
+    day_356.loc[lat] = database.loc[356]
+
+
+day_172.to_excel("d172.xlsx")
+day_173.to_excel("d173.xlsx")
+day_355.to_excel("d355.xlsx")
+day_356.to_excel("d356.xlsx")
+
+
+#%%
+#ddays = pd.DataFrame(columns=["angle"])
+databases=pickle.load(open("databases.p","rb"))
+longitude = 10.68
+latitudes = pd.read_csv("szerokosci.csv")
+
+#%%
+for database,lat in zip(databases,latitudes.lat.values):
+    print(database.sort_values("angle",ascending=False)[:2])
+
+
+#%%
+
+plt.plot(databases[10].angle)
+
+################################################################################
+#%%
+mean_albedo = alb.get_mean_albedo()
 
 dates = [(6,1),(15,2),(21,3),(5,5),(21,6),(1,8),(21,9),(1,11),(21,12)]
 

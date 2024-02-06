@@ -138,3 +138,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 seconds.xlsx
+databases.p
+przebiegi.pdf
+szerokosci.csv
+testy.py

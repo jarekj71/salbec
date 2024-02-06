@@ -81,7 +81,8 @@ class albedo:
         self._location = Observer(*location)
     
         if len(errors) > 0:
-            errors = tuple(i for i in errors if 0 <= i <=1)
+            #errors = tuple(i for i in errors if 0 <= i <=1)
+            errors = tuple(i for i in errors if i>=0)
         self._errors = errors
         
         c = self._error_starting_colors
@@ -294,8 +295,9 @@ class albedo:
         mean_value = self.get_mean_albedo()
         min_value = self.get_min_albedo()
         return (1-min_value/mean_value)*100    
+        #return (1/mean_value-1)*100    
 
-
+    '''
     def _am_albedo_time_delta(self,value:float) -> datetime.timedelta:
         if value < self.get_min_albedo():
             return None
@@ -307,6 +309,22 @@ class albedo:
             return None
         below_value = np.where(self._albedos['pm']<value)[0].max()
         return datetime.timedelta(0,int(below_value))    
+    '''
+    
+    def _get_seconds(self,value:float) ->float:
+        if value > 1:
+            return len(self._albedos['am']) # index of last element
+        if value <= self.get_min_albedo():
+            return 0    # index of first element
+        return np.where(self._albedos['am']<value)[0].max()
+    
+    def _am_albedo_time_delta(self,value:float) -> datetime.timedelta:
+        albedo_value = self._get_seconds(value)
+        return -datetime.timedelta(0,int(albedo_value)) #negative
+
+    def _pm_albedo_time_delta(self,value:float) -> datetime.timedelta:
+        albedo_value = self._get_seconds(value)
+        return datetime.timedelta(0,int(albedo_value)) #positive
 
     def get_albedo_time_delta(self,timeofday:str) -> datetime.timedelta:
         """Find the timedelta (from the noon) when given albedo aoccurs 
@@ -375,7 +393,7 @@ class albedo:
             values+=[val]
             times+=[tim.time()]           
        
-        #am errors towards noon
+        #pm errors towards noon
         for error in errors[::-1]:
             val = pmvalue*(1-error)
             tim = self._twelve_noon+self._pm_albedo_time_delta(val)
@@ -385,7 +403,7 @@ class albedo:
         values.append(pmvalue)
         times+=[slt_pm_time.time()]
         
-        #am errors towards sunset
+        #pm errors towards sunset
         for error in errors:
             val = pmvalue*(1+error)
             tim = self._twelve_noon+self._pm_albedo_time_delta(val)
