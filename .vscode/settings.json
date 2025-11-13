@@ -1,3 +1,4 @@
 {
-    "python.pythonPath": "/home/jarekj/venv/bin/python3"
+    "python.pythonPath": "/home/jarekj/venv/bin/python3",
+    "python-envs.pythonProjects": []
 }

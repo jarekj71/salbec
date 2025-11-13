@@ -7,6 +7,7 @@ Created on Wed Jan 15 07:44:48 2020
 """
 from typing import Sequence, Union
 from scipy.interpolate import interp1d
+from scipy.signal import savgol_filter
 from scipy.misc import derivative
 from scipy.optimize import least_squares
 import numpy as np
@@ -42,11 +43,18 @@ class soilSpectrum():
         """set coefficient of soil
         """
         self._const = {}
-        self._const[574] = -5795.4
-        self._const[1087] = -510.24
-        self._const[1355] = 7787.2
-        self._const[1656] = 12161
-        self._const[698] = 6932.8
+        #self._const[574] = -5795.4
+        #self._const[1087] = -5510.24 # dodano 5
+        #self._const[1355] = 7787.2
+        #self._const[1656] = 12161
+        #self._const[698] = 6932.8
+
+        self._const[675]  = -8.602
+        self._const[716]  =  16.217 
+        self._const[804]  = -7.697
+        self._const[2189] =  2.591
+        self._const[2303] = -3.484
+        self._const[2383] =  1.315
         self.soilName = None
         self.coordinates = None
 
@@ -83,8 +91,8 @@ class soilSpectrum():
             return "Wrong number of columns in data","Only two columns, one with wavelength, second with reflectance are allowed"
             
         wavelengths = spectra.iloc[:,0].values
-        if wavelengths[0] != 350:
-            return "Incorrect first column","Wavelength values must be between 350 and 2500"
+        if wavelengths[0] > 400 or wavelengths[-1] < 2400 :
+            return "Incorrect first column","Wavelength values must be at least betweem 400 and 2400 nm"
         
         reflectance = spectra.iloc[:,1].values
         if reflectance.min() <0 or reflectance.max() >1:
@@ -102,21 +110,30 @@ class soilSpectrum():
         """
         self._wavelengths = wavelengths
         self._reflectance = reflectance
-        self._f = interp1d(self._wavelengths,self._reflectance,kind="quadratic")
-        self._gl = {}
-        for key,value in self._const.items():
-            self._gl[key] = value*derivative(self._f,key,dx=10,n=2)
-
+        self._recalc()
+ 
         return None
 
-    
+    def _recalc(self):
+        self._f = interp1d(self._wavelengths,self._reflectance,kind="quadratic")
+        waves = np.arange(self._wavelengths[0],self._wavelengths[-1]+1,1)
+        values = self._f(waves)
+        #sg = savgol_filter(values,window_length=15,polyorder=3,deriv=2)
+        self._gl = {}
+        for key,value in self._const.items():
+            #self._gl[key] = value*derivative(self._f,key,dx=10,n=2)
+            self._gl[key] = value * values[key-waves[0]]
+
+
     @property
-    def spectra(self):    
+    def spectra(self):
+        self._recalc()
         spectra = sum(self._gl.values())
         return spectra
 
     @property
     def params(self):
+        self._recalc()
         return self._gl
     
     @property
@@ -149,7 +166,7 @@ class soilSpectrum():
         soil['coords'] = (lat,lon)
         soil['reflectance'] = self._reflectance
         soil['wavelengths'] = self._wavelengths
-        soil['params'] = self._gl
+        soil['params'] = self.params
         soil['spectra'] = self.spectra
         return soil
     
@@ -308,9 +325,13 @@ class soilModel():
         self.__aTs = None
         self.__abcd = None
         self._soil_params = None
-        
+        #self._c = 0.33
+        #self._cT3D = 0.1099
+        self._c = 0.263
+        self._cT3D = -0.113
+
     def __recalc(self):
-        self.a45 = 0.33 - 0.11 * self.T3D + self.GL
+        self.a45 = self._c + self._cT3D * self.T3D + self.GL
         sA = 6.26e-7 + 0.0043*pow(self.HSD,-1.418)
         Ts = np.arange(0,76)
         self.__aTs = self.a45*(1+sA*(Ts-45))
@@ -364,8 +385,13 @@ class soilModel():
         y3 = np.array([1])
         y_train = np.concatenate((y2,y3))
 
+        x0_min = [-3,-0.02,0,-3e-6]
+        x0_max = [-1.5,-0.01,0.04,-1e-6]
         x0 = np.array([-2.,-0.01,0.01,-1.0e-7]) # starting values, possible source of overfitting
-        self.__res = least_squares(self.__fit_aTS,x0,args=(x_train,y_train))
+        self.__res = least_squares(self.__fit_aTS,x0,
+                                   #loss='cauchy',
+                                   #bounds=(x0_min,x0_max),
+                                   args=(x_train,y_train))
         self.__reset_abcd = copy.copy(self.__res.x)
         self.__abcd = copy.copy(self.__res.x)
         self.modify_curve_parameters(b=-2/200)
